@@ -1,9 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri May 20 10:01:13 2022
-
-@author: johode
-"""
+#See also https://github.com/thebackman/SMHI
 
 import api_endpoints
 import helpers
@@ -13,7 +8,6 @@ import json
 import logging
 import numbers
 
-# -- functions
 
 def list_stations(param, col=None):
     """ list stations that have a certain wheather parameter """

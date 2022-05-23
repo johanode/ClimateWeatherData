@@ -2,38 +2,11 @@
 """
 Created on Sun May 22 15:10:49 2022
 
-@author: johode
+@author: Johan Odelius
 """
 import smhi
 import helpers
     
-PrecitipationTypes = ['snowfall',
-            'regn',
-            'duggregn',
-            'regnskurar',
-            'kornsnö',
-            'snöblandat regn',
-            'snöbyar',
-            'Obestämd nederbördstyp',
-            'isnålar',
-            'underkyld nederbörd',
-            'iskorn',
-            'småhagel',
-            'byar av snöblandat regn',
-            'snöhagel',
-            'ishagel']
-
-def get_types(cat):
-    if cat.lower()=='rain':
-        return ['regn', 'duggregn', 'regnskurar']
-    elif cat.lower()=='snow':
-        return ['snowfall', 'kornsnö', 'snöbyar', 'snöhagel']
-    elif cat.lower()=='snowslush':
-        return ['snöblandat regn', 'byar av snöblandat regn']
-    elif cat.lower()=='supercooledrain':
-        return ['underkyld nederbörd']
-    else: 
-        return []
 
 # %% Temperature
 
@@ -394,7 +367,7 @@ def PRRN(station, ts, time_period='y'):
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
     
     # Data for days with rain
-    valid_types = get_types('Rain')
+    valid_types = helpers.get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
     
     # Sum up all during time period
@@ -429,7 +402,7 @@ def PRSN(station, ts, time_period='y'):
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
      
     # Data for days with valid precipitation
-    valid_types = get_types('Snow')
+    valid_types = helpers.get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
     
     # Sum up all during time period
@@ -464,7 +437,7 @@ def SuperCooledPR(station, ts, time_period='y'):
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
      
     # Cooled rain types
-    valid_types = get_types('SuperCooledRain')
+    valid_types = helpers.get_types('SuperCooledRain')
     
     # Data for days with valid precipitation
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
@@ -544,7 +517,7 @@ def PRSNmax(station, ts, time_period='y'):
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
   
     # Snow types
-    valid_types = get_types('Snow') 
+    valid_types = helpers.get_types('Snow') 
     
     # precip_data.loc[precip_data['Type'].isin(valid_types)].groupby('Type').max()
     
@@ -769,7 +742,7 @@ def ColdRainDays(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Rain')
+    # valid_types = helpers.get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Days with precip given temperature interval
@@ -815,7 +788,7 @@ def ColdRainGT10Days(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Rain')
+    # valid_types = helpers.get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 10 given temperature interval
@@ -862,7 +835,7 @@ def ColdRainGT20Days(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Rain')
+    # valid_types = helpers.get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 20 given temperature interval
@@ -908,7 +881,7 @@ def WarmSnowDays(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Snow')
+    # valid_types = helpers.get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Days with precip given temperature interval
@@ -954,7 +927,7 @@ def WarmSnowGT10Days(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Snow')
+    # valid_types = helpers.get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 10 given temperature interval
@@ -1001,7 +974,7 @@ def WarmSnowGT20Days(station, ts, time_period='y'):
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = get_types('Snow')
+    # valid_types = helpers.get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 20 given temperature interval
@@ -1050,7 +1023,7 @@ def ColdPRRNdays(station, ts, time_period='y'):
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = get_types('Rain')
+    valid_types = helpers.get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval
@@ -1098,7 +1071,7 @@ def ColdPRRNgt10Days(station, ts, time_period='y'):
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = get_types('Rain')
+    valid_types = helpers.get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain more than 10 mm given temperature interval
@@ -1146,7 +1119,7 @@ def ColdPRRNgt20Days(station, ts, time_period='y'):
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = get_types('Rain')
+    valid_types = helpers.get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain more than 20 mm given temperature threshold
@@ -1194,8 +1167,8 @@ def WarmPRSNdays(station, ts, time_period='y'):
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
-    # Filter out days with rain
-    valid_types = get_types('Snow')
+    # Filter out days with snow
+    valid_types = helpers.get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval
@@ -1243,7 +1216,7 @@ def WarmPRSNgt10days(station, ts, time_period='y'):
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with snow
-    valid_types = get_types('Snow')
+    valid_types = helpers.get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature threshold
@@ -1291,7 +1264,7 @@ def WarmPRSNgt20days(station, ts, time_period='y'):
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with snow
-    valid_types = get_types('Snow')
+    valid_types = helpers.get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval

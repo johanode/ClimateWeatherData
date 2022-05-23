@@ -62,6 +62,34 @@ def get_filter(ts, time_period):
         
     return time_filter
 
+def get_types(cat):
+    PrecitipationTypes = ['snowfall',
+                'regn',
+                'duggregn',
+                'regnskurar',
+                'kornsnö',
+                'snöblandat regn',
+                'snöbyar',
+                'Obestämd nederbördstyp',
+                'isnålar',
+                'underkyld nederbörd',
+                'iskorn',
+                'småhagel',
+                'byar av snöblandat regn',
+                'snöhagel',
+                'ishagel']
+    
+    if cat.lower()=='rain':
+        return ['regn', 'duggregn', 'regnskurar']
+    elif cat.lower()=='snow':
+        return ['snowfall', 'kornsnö', 'snöbyar', 'snöhagel']
+    elif cat.lower()=='snowslush':
+        return ['snöblandat regn', 'byar av snöblandat regn']
+    elif cat.lower()=='supercooledrain':
+        return ['underkyld nederbörd']
+    else: 
+        return []
+    
 def filter_time(df, ts, time_period, idx='Date', col='Value'):
     time_filter = get_filter(ts, time_period)
 
