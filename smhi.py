@@ -11,11 +11,11 @@ import requests
 import pandas as pd
 import json
 import logging
+import numbers
 
 # -- functions
 
-
-def list_stations(param, col='id'):
+def list_stations(param, col=None):
     """ list stations that have a certain wheather parameter """
 
     # -- API call
@@ -42,11 +42,22 @@ def list_stations(param, col='id'):
         return(df)
 
 
-def get_param_value(parameter, station=None):
+def list_parameters():
     df_parameters = pd.DataFrame(helpers.parameters())
-    parameter_id = None
-    if parameter in df_parameters['label'].to_list():
-        parameter_id = df_parameters.set_index('label').loc[parameter, 'key']
+    return df_parameters
+
+def list_indicators():
+    df_indicators = pd.DataFrame(helpers.indicators())
+    return df_indicators
+
+def get_param_value(parameter, station=None):
+    if isinstance(parameter,numbers.Number):
+        parameter_id = parameter
+    else:
+        df_parameters = pd.DataFrame(helpers.parameters())
+        parameter_id = None
+        if parameter in df_parameters['label'].to_list():
+            parameter_id = df_parameters.set_index('label').loc[parameter, 'key']
         
     if station is not None:
         valid_stations = list_stations(parameter_id, col='id')
@@ -54,7 +65,8 @@ def get_param_value(parameter, station=None):
             parameter_id = None
     return parameter_id
 
-
+def get_time_period(ts, time_period):
+    return tuple(helpers.get_filter(ts, time_period))
 
 def get_corrected(param, station, translate=True):
     """ get corrected archive via CSV download """
@@ -103,5 +115,13 @@ def get_corrected(param, station, translate=True):
     # if label is not None:
         # df.rename(columns = {df.columns[k_value] : label}, inplace=True)
         
-
     return df
+
+def get_values(param, station, ts=None, time_period=None):
+    parameter_id = get_param_value(param, station)
+    data = get_corrected(parameter_id, station)
+    if ts is not None:
+        values = helpers.filter_time(data, ts, time_period)
+    else:
+        values = data['Values']
+    return values

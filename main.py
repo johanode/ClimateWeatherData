@@ -2,56 +2,67 @@
 # -- import the libs and some reload 
 
 import pandas as pd
-import smhi as smhi
-import importlib
-importlib.reload(smhi)
+import smhi
+import climate
 
 
- 
+# Get weather parameters
+parameters = smhi.list_parameters()
+print(parameters.head())
+
+# Find stations with certain parameter
+param = 'TemperaturePast24h'
+param_id = smhi.get_param_value(param)
+stations = smhi.list_stations(param_id)
+print(stations.head())
+
+# Print selected weather station
 station = 162860
-data = pd.read_pickle('data/ofelia_data.pkl')
-ts = data.loc[20,'Anmält datum']
+print(stations.set_index('id').loc[station,'name'])
 
-# -- listing the parameters that are avaliable
+# Download historical data from station for parameter
+data = smhi.get_corrected(param_id, station)
+print(data.head())
 
-smhi.list_params()
-
-# -- for one parameter, see what stations have it and in what timeframe, lon lat area etc.
-
-# all stations 
-df_stations = smhi.list_stations(param = 5)
-
-# list one station
-df_stations.loc[df_stations["key"] == "159880"]
-
-# limit the stations further to those that have been online in recent years
-df_stations = df_stations.loc[(df_stations["starting"] >= '2000-01-01')]
-
-# take a random sample of stations
-df_random = df_stations.sample(n = 10, random_state= 11)
-df_random
-
-# TODO:
-
-# limit the stations to within a geographical area
-# fix the order of data frame columns so that they match
-# add some examples and actually do something with the data
+# Get parameter values for a station at a certain time
+ts = pd.to_datetime('2012-04-03').date()
+values = smhi.get_values(param_id, station, ts)
+print(values)
 
 
-# -- get the actual data
+# Get parameter values for a station at a certain time period
+time_period = 'm' #('y' : year, 's' : season, 'm' : month)
+values = smhi.get_values(param_id, station, ts, time_period)
+print(values)
 
-# create a tuple to try out stations
-# 97250: not active, no latest months data, only historical
-# 158820: active, both latest months and historical data
 
-station = (97250,)
-station = (158820,)
-stations = (97250, 158820)
+# Get climate feature/indicator for a station at a certain time, e.g. failure time
+# Lst indicators
+indicators = smhi.list_indicators()
+print(indicators.head())
 
-# download for station(s)
-dict_df = smhi.get_stations(param = 5, station_keys = station)
-dict_df = smhi.get_stations(param = 5, station_keys = stations)
+# e.g. WarmDays (Days with temperature more than 20 deg)
+# defualut time period is 'y'
+indicator_value = climate.WarmDays(station, ts)
+print('Warm days = %d' % indicator_value)
 
-# access the data
-dict_df["df_latest"]
-dict_df["df_corrected"]
+# e.g. ConWarmDays (Days in a row with temperature more than 20 deg)
+# defualut time period is 'y'
+indicator_value = climate.ConWarmDays(station, ts)
+print('Con. warm days = %d' % indicator_value)
+
+# get time period 
+ts = pd.to_datetime('2012-04-03').date()
+for time_period in ['m','s','y']:
+   print(smhi.get_time_period(ts, time_period)) 
+
+# e.g. ZeroCrossingDays
+time_period = 's'
+ts = pd.to_datetime('2012-01-03').date()
+indicator_value = climate.ZeroCrossingDays(station, ts)
+print('%s-%s: ' % smhi.get_time_period(ts, time_period) + 'Zero crossing days = %d' % indicator_value)
+
+ts = pd.to_datetime('2020-01-03').date()
+# defualut time period is 's', will be Dec 2020 - Feb 2020
+indicator_value = climate.ZeroCrossingDays(station, ts)
+print('%s-%s: ' % smhi.get_time_period(ts, time_period) + 'Zero crossing days = %d' % indicator_value)
