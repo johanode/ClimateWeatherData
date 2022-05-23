@@ -5,20 +5,8 @@ import logging
 import json
 import requests
 
-# -- logging
 
-FORMAT = '%(asctime)s %(levelname)s: %(module)s: %(funcName)s(): %(message)s'
-logging.basicConfig(level=logging.DEBUG, format = FORMAT, filename = "smhi.log", filemode = "w")
-logging.getLogger("requests").setLevel(logging.WARNING)
-logging.getLogger("urllib3").setLevel(logging.WARNING)
-
-# -- functions
-
-def write_json(json_obj, file_name = 'file.json'):
-    """ write a json file to wd/file.json"""
-    with open(file_name, 'w') as outfile:
-        json.dump(json_obj, outfile)
-
+# functions
 def api_return_data(adr):
     """ initate API call and return the JSON data """
     # initiate the call
@@ -103,10 +91,14 @@ def filter_time(df, ts, time_period, idx='Date', col='Value'):
         return df_filter
     
     
-def parameters():
+def get_parameters():
     # See https://opendata.smhi.se/apidocs/metobs/parameter.html
     # Thanks also to https://github.com/LasseRegin/smhi-open-data
-    return [
+    
+    # with open('parameters.json') as fp:
+    #     parameters = json.load(fp)
+    
+    parameters = [
         {'label' : 'TemperaturePast1h', 'key' : 1          , 'name' : 'Lufttemperatur'                        , 'Note' : 'Momentanvärde, 1 gång/tim'},
         {'label' : 'TemperaturePast24h', 'key' : 2         , 'name' : 'Lufttemperatur'                        , 'Note' : 'Medelvärde 1 dygn, 1 gång/dygn, kl 00'},
         {'label' : 'WindDirection', 'key' : 3              , 'name' : 'Vindriktning'                          , 'Note' : 'Medelvärde 10 min, 1 gång/tim'},
@@ -148,46 +140,9 @@ def parameters():
         {'label' : 'TemperatureDew', 'key' : 39            , 'name' : 'Daggpunktstemperatur'                  , 'Note' : 'Momentanvärde, 1 gång/tim'},
         {'label' : 'GroundCondition', 'key' : 40           , 'name' : 'Markens tillstånd'                     , 'Note' : 'Momentanvärde, 1 gång/dygn, kl 06'},
         ]
+    return parameters
 
-def indicators():
-    return [{'Name':"TAS","Climate parameter":"Temperatur","Climate index":"Medeltemperatur","Time period":"s, y"},
-            {'Name':"TX","Climate parameter":"Temperatur","Climate index":"Dygnsmaxtemperatur","Time period":"m, s, y"},
-            {'Name':"TN","Climate parameter":"Temperatur","Climate index":"Dygnsminimitemperatur","Time period":"m, s, y"},
-            {'Name':"DTR","Climate parameter":"Temperatur","Climate index":"Dygnsamplitud (varmast minus kallast)","Time period":"m"},
-            {'Name':"WarmDays","Climate parameter":"Temperatur","Climate index":"Varma dagar\/högsommardagar (Maxtemperatur >20 ºC) *","Time period":"s, y"},
-            {'Name':"ConWarmDays","Climate parameter":"Temperatur","Climate index":"Värmebölja (dagar i följd med maxtemperatur > 20ºC)","Time period":"y"},
-            {'Name':"ZeroCrossingDays","Climate parameter":"Temperatur","Climate index":"Nollgenomgångar (Antal dagar med högsta temp > 0ºC och lägsta temp < 0ºC)","Time period":"s"},
-            {'Name':"VegSeasonDayEnd-5","Climate parameter":"Temperatur","Climate index":"Vegetationsperiodens slut (sista dag i sammanhängande 4-dags period med medeltemp > 5ºC","Time period":"y"},
-            {'Name':"VegSeasonDayStart-5","Climate parameter":"Temperatur","Climate index":"Vegetationsperiodens början (sista dag i sammanhängande 4-dags period med medeltemp > 5 ºC)","Time period":"y"},
-            {'Name':"VegSeasonLentgh-5","Climate parameter":"Temperatur","Climate index":"Vegetationsperiodens längd (medeltemp > 5ºC)","Time period":"y"},
-            {'Name':"VegSeasonLentgh-2","Climate parameter":"Temperatur","Climate index":"Vegetationsperiodens längd (medeltemp > 2ºC)","Time period":"y"},
-            {'Name':"FrostDays","Climate parameter":"Temperatur","Climate index":"Frostdagar (minimitemperatur < 0ºC )","Time period":"s"},
-            {'Name':"ColdDays","Climate parameter":"Temperatur","Climate index":"Kalla dagar (maxtemperatur < -7ºC)","Time period":"y"},
-            {'Name':"PR","Climate parameter":"Nederbörd","Climate index":"Summa nederbörd","Time period":"m, s, y"},
-            {'Name':"PRRN","Climate parameter":"Nederbörd","Climate index":"Summa regn","Time period":"s, y"},
-            {'Name':"PRSN","Climate parameter":"Nederbörd","Climate index":"Summa snö","Time period":"s, y"},
-            {'Name':"SuperCooledPR","Climate parameter":"Nederbörd","Climate index":"Underkylt regn","Time period":"y"},
-            {'Name':"PR7Dmax","Climate parameter":"Nederbörd","Climate index":"Högsta nederbörd under 7 dagar","Time period":"y"},
-            {'Name':"Prmax","Climate parameter":"Nederbörd","Climate index":"Maximal nederbördsintensitet","Time period":"y"},
-            {'Name':"PRSNmax","Climate parameter":"Nederbörd","Climate index":"Maximal snöfallsintensitet","Time period":"y"},
-            {'Name':"PRgt10Days","Climate parameter":"Nederbörd","Climate index":"Kraftig nederbörd > 10 mm\/dygn","Time period":"s, y"},
-            {'Name':"PRgt25Days","Climate parameter":"Nederbörd","Climate index":"Extrem nederbörd > 25 mm\/dygn","Time period":"s, y"},
-            {'Name':"DryDays","Climate parameter":"Nederbörd","Climate index":"Torra dagar (med nederbörd < 1 mm)","Time period":"m"},
-            {'Name':"LnstDryDays","Climate parameter":"Nederbörd","Climate index":"Längsta torrperiod (med <1 mm\/dag)","Time period":"s"},
-            {'Name':"SncDays","Climate parameter":"Snö på marken","Climate index":"Snötäcke","Time period":"y"},
-            {'Name':"SNWmax","Climate parameter":"Snö på marken","Climate index":"Maximalt snödjup (räknat som vatteninnehåll)","Time period":"y"},
-            {'Name':"SfcWind","Climate parameter":"Vind och densitet","Climate index":"Medelvindhastighet i 10m-nivå","Time period":"s, y"},
-            {'Name':"WindGustMax","Climate parameter":"Vind och densitet","Climate index":"Maximal byvind (10m-nivå)","Time period":"y"},
-            {'Name':"WindyDays","Climate parameter":"Vind och densitet","Climate index":"Antal dagar med byvind >21 m\/s (10m-nivå)","Time period":"y"},
-            {'Name':"ColdRainDays","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd när temperaturen ligger mellan 0.58 och 2 grader","Time period":"y"},
-            {'Name':"ColdRainGT10Days","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd ( > 10 mm\/dygn) när temperaturen ligger mellan 0.58 och 2 grader","Time period":"y"},
-            {'Name':"ColdRainGT20Days","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd ( > 20 mm\/dygn) när temperaturen ligger mellan 0.58 och 2 grader","Time period":"y"},
-            {'Name':"WarmSnowDays","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd när temperaturen ligger mellan -2 och 0.58 grader","Time period":"y"},
-            {'Name':"WarmSnowGT10Days","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd (> 10 mm\/dygn) när temperaturen ligger mellan -2 och 0.58 grader","Time period":"y"},
-            {'Name':"WarmSnowGT20Days","Climate parameter":"Kombinationsindex","Climate index":"Nederbörd (> 20 mm\/dygn) när temperaturen ligger mellan -2 och 0.58 grader","Time period":"y"},
-            {'Name':"ColdPRRNdays","Climate parameter":"Kombinationsindex","Climate index":"Regn när temperaturen är under 2 grader","Time period":"y"},
-            {'Name':"ColdPRRNgt10Days","Climate parameter":"Kombinationsindex","Climate index":"Regn ( > 10 mm\/dygn) när temperaturen är under 2 grader","Time period":"y"},
-            {'Name':"ColdPRRNgt20Days","Climate parameter":"Kombinationsindex","Climate index":"Regn ( > 20 mm\/dygn) när temperaturen är under 2 grader","Time period":"y"},
-            {'Name':"WarmPRSNdays","Climate parameter":"Kombinationsindex","Climate index":"Snö när temperaturen är över -2 grader","Time period":"y"},
-            {'Name':"WarmPRSNgt10Days","Climate parameter":"Kombinationsindex","Climate index":"Snö ( > 10 mm\/dygn) när temperaturen är över -2 grader","Time period":"y"},
-            {'Name':"WarmPRSNgt20Days","Climate parameter":"Kombinationsindex","Climate index":"Snö ( > 20 mm\/dygn) när temperaturen är över -2 grader","Time period":"y"}]
+def get_indicators():
+    with open('indicators.json') as fp:
+        indicators = json.load(fp)
+    return indicators

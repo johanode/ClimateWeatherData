@@ -37,18 +37,18 @@ def list_stations(param, col=None):
 
 
 def list_parameters():
-    df_parameters = pd.DataFrame(helpers.parameters())
+    df_parameters = pd.DataFrame(helpers.get_parameters())
     return df_parameters
 
 def list_indicators():
-    df_indicators = pd.DataFrame(helpers.indicators())
+    df_indicators = pd.DataFrame(helpers.get_indicators())
     return df_indicators
 
 def get_param_value(parameter, station=None):
     if isinstance(parameter,numbers.Number):
         parameter_id = parameter
     else:
-        df_parameters = pd.DataFrame(helpers.parameters())
+        df_parameters = pd.DataFrame(helpers.get_parameters())
         parameter_id = None
         if parameter in df_parameters['label'].to_list():
             parameter_id = df_parameters.set_index('label').loc[parameter, 'key']
