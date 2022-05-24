@@ -145,7 +145,7 @@ def get_parameters():
     # See https://opendata.smhi.se/apidocs/metobs/parameter.html
     # Thanks also to https://github.com/LasseRegin/smhi-open-data
     
-    # with open('parameters.json') as fp:
+    # with open('parameters.json', encoding='utf-8') as fp:
     #     parameters = json.load(fp)
     
     parameters = [
@@ -166,7 +166,7 @@ def get_parameters():
         {'label' : 'PrecipMaxPast15m', 'key' : 15          , 'name' : 'Nederbördsintensitet'                  , 'Note' : 'Max under 15 min, 4 gånger/tim'},
         {'label' : 'CloudCover', 'key' : 16                , 'name' : 'Total molnmängd'                       , 'Note' : 'Momentanvärde, 1 gång/tim'},
         {'label' : 'PrecipPast12h', 'key' : 17             , 'name' : 'Nederbörd'                             , 'Note' : '2 gånger/dygn, kl 06 och 18'},
-        {'label' : 'PrecipPast24hAt18', 'key' : 18         , 'name' : 'Nederbörd'                             , 'Note' : '1 gång/dygn, kl 18'},
+        {'label' : 'PrecipTypePast24h', 'key' : 18         , 'name' : 'Typ av nederbörd'                      , 'Note' : '4 gång/dygn'},
         {'label' : 'TemperatureMinPast24h', 'key' : 19     , 'name' : 'Lufttemperatur'                        , 'Note' : 'Min, 1 gång per dygn'},
         {'label' : 'TemperatureMaxPast24h', 'key' : 20     , 'name' : 'Lufttemperatur'                        , 'Note' : 'Max, 1 gång per dygn'},
         {'label' : 'WindGust', 'key' : 21             , 'name' : 'Byvind'                                , 'Note' : 'Max, 1 gång/tim'},
@@ -193,6 +193,6 @@ def get_parameters():
     return parameters
 
 def get_indicators():
-    with open('indicators.json') as fp:
+    with open('indicators.json', encoding='utf-8') as fp:
         indicators = json.load(fp)
     return indicators
