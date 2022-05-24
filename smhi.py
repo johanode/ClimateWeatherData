@@ -10,10 +10,9 @@ import numbers
 
 
 def list_stations(param, col=None):
-    """ list stations that have a certain wheather parameter """
-
-    # -- API call
-
+    # validate parameter input
+    param = get_param_value(param)
+    
     # create the API adress
     adr = api_endpoints.ADR_PARAMETER
     adr_full = adr.format(parameter=param)
@@ -44,55 +43,60 @@ def list_indicators():
     df_indicators = pd.DataFrame(helpers.get_indicators())
     return df_indicators
 
-def get_param_value(parameter, station=None):
+def get_param_value(parameter):
+    # check if parameter isnumeric
     if isinstance(parameter,numbers.Number):
         parameter_id = parameter
     else:
+        # Load parameters
         df_parameters = pd.DataFrame(helpers.get_parameters())
-        parameter_id = None
-        if parameter in df_parameters['label'].to_list():
-            parameter_id = df_parameters.set_index('label').loc[parameter, 'key']
-        
-    if station is not None:
-        valid_stations = list_stations(parameter_id, col='id')
-        if not station in valid_stations:
-            parameter_id = None
-    return parameter_id
+        # Validate string input
+        valid_param = helpers.validatestring(parameter, df_parameters['label'].to_list())
+        # Get id
+        parameter_id = df_parameters.set_index('label').loc[valid_param, 'key']
+    
+    return parameter_id        
+
+def isin_station(parameter, station):
+    # Validate paramter input
+    parameter_id = get_param_value(parameter)
+    
+    # check if parameter is available on station
+    valid_stations = list_stations(parameter_id, col='id')
+    
+    return station in valid_stations
 
 def get_time_period(ts, time_period):
     return tuple(helpers.get_filter(ts, time_period))
 
 def get_corrected(param, station, translate=True):
-    """ get corrected archive via CSV download """
-    
-    # -- API call
-    
     # create the API adress
     adr = api_endpoints.ADR_CORRECTED
     adr_full = adr.format(parameter = param, station = station)
     
+    # validate input weather parameter (param)
+    param = get_param_value(param)
+    
     # download the csv data
-    if param in [3,4,21]:
+    if param in [3,4,21]: #[Windspeed, WindDirection, WindGust]
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)']], keep_date_col=True)
         df.drop(labels='Tid (UTC)', axis=1, inplace=True)
         k_value = 2
         df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
-    elif param in [8]:
+    elif param in [8]: #[SnowDepthPast24h]
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
         df.drop(labels='Tid (UTC)', axis=1, inplace=True)
-        # df.iloc[:,1] = df.iloc[:,1]-pd.to_timedelta(1,unit='day')
         k_value = 2
         df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
-    elif param in [18]:
+    elif param in [18]: #[PrecipTypePast24h] 
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3,4], delimiter=";", parse_dates=[1,2,3])
         k_value = 3
-    elif param is not None:
+    else:
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3,4], delimiter=";", parse_dates=[1,2,3])
         k_value = 3
         df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
-    else:
-        df = pd.DataFrame()
   
+    # Rename columns to english
     if df.shape[0]>0 and translate:
         columns = {}
         if k_value==3:
@@ -111,11 +115,23 @@ def get_corrected(param, station, translate=True):
         
     return df
 
-def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value'):
-    parameter_id = get_param_value(param, station)
+def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value', check_station=False):
+    # validate input weather parameter (param)
+    parameter_id = get_param_value(param)
+    
+    if check_station:
+        # Also check if parameter is available for input weather station (station)
+        if isin_station(parameter_id, station):
+           print('Paramater not avaiable for selected station') 
+        
+    # Download corrected historical data (last 3 months not available)
     data = get_corrected(parameter_id, station)
+    
+    # if timestamp in input filter data based on timestamp and time period
+    # idx specified index column and col data column
     if ts is not None:
         values = helpers.filter_time(data, ts, time_period, idx=idx, col=col)
     else:
         values = data['Values']
+        
     return values
