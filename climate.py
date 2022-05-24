@@ -5,8 +5,59 @@ Created on Sun May 22 15:10:49 2022
 @author: Johan Odelius
 """
 import smhi
-from helpers import get_types #validatestring
+from helpers import get_types, validatestring
     
+# sub functions
+climate_weather_parameters = {
+    'temperature' : [
+        'TemperatureMeanPastMonth',    
+        'TemperatureMaxPast24h',
+        'TemperatureMinPast24h',
+        'TemperaturePast24h'
+        ],
+    'precipitation' : [
+        'PrecipPast24hAt06',
+        'PrecipTypePast24h'
+        ],
+    'wind' : [
+        'WindSpeed',
+        'WindGust'
+        ]
+    }
+climate_weather_parameters['combination'] = climate_weather_parameters['temperature'] + climate_weather_parameters['precipitation']
+
+def list_stations(parameter_type='all'):
+    if parameter_type.lower() == 'all':
+        # list all climate paramters
+        parameters = []
+        for ty in climate_weather_parameters:
+            parameters += climate_weather_parameters[ty]
+    else:
+        # validate that type is valid ['temperature','precipitation','wind','combination']
+        ty = validatestring(parameter_type, climate_weather_parameters.keys())
+        parameters = climate_weather_parameters[ty]
+    
+    # Make variable a set, i.e. remove dublicates
+    paramsset = set(parameters)
+    
+    # Find stations for first parameter
+    df_stations = smhi.list_stations(paramsset.pop())
+    # Make stations id a set
+    stations = set(df_stations['id'])
+    # Loop the rest of parameters and update stations list with intersection
+    for param in paramsset:
+        stations = stations.intersection(smhi.list_stations(param, col='id'))
+    
+    # Output columns of dataframe
+    cols = ['name','latitude','longitude','active','from','to']
+    # Filter out valid stations
+    df_output = df_stations.set_index('id').loc[stations,cols].reset_index()
+    
+    return df_output
+    
+def isin_station(station, parameter_type='all'):
+    df_stations = list_stations(parameter_type)
+    return station in df_stations['id'].to_list()
 
 # %% Temperature
 
@@ -19,10 +70,10 @@ def TAS(station, ts, time_period='y'):
     #   time_period     : time period ('y','s'), default 'y'
     
     weather_parameter = 'TemperatureMeanPastMonth'
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Mean of TemperatureMeanPastMonth
-    value = filtered_weather_values.mean()
+    value = parameter_values.mean()
 
     return value
 
@@ -36,10 +87,10 @@ def TX(station, ts, time_period='y'):
     
     weather_parameter = 'TemperatureMaxPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Max of TemperatureMaxPast24h
-    value = filtered_weather_values.max()
+    value = parameter_values.max()
 
     return value
 
@@ -54,10 +105,10 @@ def TN(station, ts, time_period='y'):
     
     weather_parameter = 'TemperatureMinPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Min of TemperatureMinPast24h
-    value = filtered_weather_values.min()
+    value = parameter_values.min()
 
     return value
 
@@ -97,10 +148,10 @@ def WarmDays(station, ts, time_period='y'):
     
     weather_parameter = 'TemperatureMaxPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Number of days over 20 deg
-    value = (filtered_weather_values > 20).sum()
+    value = (parameter_values > 20).sum()
 
     return value
 
@@ -115,13 +166,13 @@ def ConWarmDays(station, ts, time_period='y'):
     
     weather_parameter = 'TemperatureMaxPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days in a row with temperature more than 20 deg
     number_of_days = 0
     max_number_of_days = 0
     temperature_threshold = 20
-    for value in filtered_weather_values:
+    for value in parameter_values:
         if value > temperature_threshold:
             number_of_days += 1
             max_number_of_days = max(max_number_of_days, number_of_days)
@@ -196,10 +247,10 @@ def VegSeasonDayEnd(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     weather_parameter = 'TemperaturePast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
-    _,veg_end = VegSeason(filtered_weather_values)
+    _,veg_end = VegSeason(parameter_values)
 
     # Returning last date of vegperiod
     return veg_end
@@ -214,10 +265,10 @@ def VegSeasonDayStart(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     weather_parameter = 'TemperaturePast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
-    veg_start,_ = VegSeason(filtered_weather_values)
+    veg_start,_ = VegSeason(parameter_values)
 
     # Returning first date of vegperiod
     return veg_start
@@ -234,10 +285,10 @@ def VegSeasonLentgh(station, ts, time_period='y', temperature=5):
 
     weather_parameter = 'TemperaturePast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
-    veg_start,veg_end = VegSeason(filtered_weather_values)
+    veg_start,veg_end = VegSeason(parameter_values)
 
     # Returning length in days of vegperiod
     return (veg_end-veg_start).days
@@ -254,10 +305,10 @@ def FrostDays(station, ts, time_period='s'):
 
     weather_parameter = 'TemperatureMinPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Count days where min temperature is less than 0
-    value = (filtered_weather_values < 0).sum()
+    value = (parameter_values < 0).sum()
 
     return value
 
@@ -272,10 +323,10 @@ def ColdDays(station, ts, time_period='s'):
 
     weather_parameter = 'TemperatureMaxPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days with max temperature less than -7
-    value = (filtered_weather_values < -7).sum()
+    value = (parameter_values < -7).sum()
 
     return value
 
@@ -291,10 +342,10 @@ def PR(station, ts, time_period='y'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Sum of PrecipPast24hAt06
-    value = filtered_weather_values.sum()
+    value = parameter_values.sum()
 
     return value
 
@@ -311,7 +362,7 @@ def PRRN(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -340,7 +391,7 @@ def PRSN(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -369,7 +420,7 @@ def SuperCooledPR(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -398,10 +449,10 @@ def PR7Dmax(station, ts, time_period='y'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Sum of PrecipPast24hAt06 for rolling window of 7 days (sum or max??)
-    values = filtered_weather_values.rolling(7).sum()
+    values = parameter_values.rolling(7).sum()
 
     # Max of sum of precipitation
     return values.max()
@@ -417,10 +468,10 @@ def PRmax(station, ts, time_period='y'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Max of PrecipPast24hAt06
-    value = filtered_weather_values.max()
+    value = parameter_values.max()
 
     return value
 
@@ -437,7 +488,7 @@ def PRSNmax(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -468,10 +519,10 @@ def PRgt10Days(station, ts, time_period='y'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of more than 10 mm precip
-    value = (filtered_weather_values > 10).sum()
+    value = (parameter_values > 10).sum()
 
     return value
 
@@ -485,10 +536,10 @@ def PRgt25Days(station, ts, time_period='y'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of more than 25 mm precip
-    value = (filtered_weather_values > 25).sum()
+    value = (parameter_values > 25).sum()
 
     return value
 
@@ -503,11 +554,11 @@ def DryDays(station, ts, time_period='m'):
 
     weather_parameter = 'PrecipPast24hAt06'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of less than 1 mm precip
-    if filtered_weather_values.size>0:
-        value = (filtered_weather_values < 1).sum()
+    if parameter_values.size>0:
+        value = (parameter_values < 1).sum()
     else:
         value = float('NaN')
 
@@ -524,11 +575,11 @@ def SncDays(station, ts, time_period='y'):
 
     weather_parameter = 'SnowDepthPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Number of days with snow
-    if filtered_weather_values.size>0:
-        value = (filtered_weather_values > 0).sum()
+    if parameter_values.size>0:
+        value = (parameter_values > 0).sum()
     else:
         value = float('NaN')
         
@@ -544,10 +595,10 @@ def SNWmax(station, ts, time_period='y'):
 
     weather_parameter = 'SnowDepthPast24h'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
+    parameter_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Maximum snow depth
-    value = filtered_weather_values.max()
+    value = parameter_values.max()
 
     return value
 
@@ -563,10 +614,10 @@ def SfcWind(station, ts, time_period='y'):
 
     weather_parameter = 'WindSpeed'
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
+    parameter_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Daily max of mean windspeed observations
-    values = filtered_weather_values.resample('1D').max()
+    values = parameter_values.resample('1D').max()
 
     # Max of daily max during time period
     return values.max()
@@ -583,10 +634,10 @@ def WindGustMax(station, ts, time_period='y'):
 
     weather_parameter = 'WindGust'  # Wind Gust
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
+    parameter_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Daily max of wind gust (byvind) observations
-    values = filtered_weather_values.resample('1D').max()
+    values = parameter_values.resample('1D').max()
 
     # Max of daily max during time period
     return values.max()
@@ -602,11 +653,11 @@ def WindyDays(station, ts, time_period='y'):
 
     weather_parameter = 'WindGust'  # Wind Gust
     # Filter based on failure time and time period
-    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
+    parameter_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Number of days with daily max of wind gust (byvind) above 21
-    if filtered_weather_values.size>0:
-        value = (filtered_weather_values.resample('1D').max() > 21).sum()
+    if parameter_values.size>0:
+        value = (parameter_values.resample('1D').max() > 21).sum()
     else:
         value = float('NaN')
 
@@ -626,7 +677,7 @@ def ColdRainDays(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -663,7 +714,7 @@ def ColdRainGT10Days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -701,7 +752,7 @@ def ColdRainGT20Days(station, ts, time_period='y'):
    # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -738,7 +789,7 @@ def WarmSnowDays(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -775,7 +826,7 @@ def WarmSnowGT10Days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -813,7 +864,7 @@ def WarmSnowGT20Days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    # weather_parameter = 'PrecipPast24hAt18'
+    # weather_parameter = 'PrecipTypePast24h'
     # # Filter based on failure time and time period
     # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -851,7 +902,7 @@ def ColdPRRNdays(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -890,7 +941,7 @@ def ColdPRRNgt10Days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -929,7 +980,7 @@ def ColdPRRNgt20Days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -969,7 +1020,7 @@ def WarmPRSNdays(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -1008,7 +1059,7 @@ def WarmPRSNgt10days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
@@ -1047,7 +1098,7 @@ def WarmPRSNgt20days(station, ts, time_period='y'):
     # Filter based on failure time and time period
     precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
-    weather_parameter = 'PrecipPast24hAt18'
+    weather_parameter = 'PrecipTypePast24h'
     # Filter based on failure time and time period
     precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
