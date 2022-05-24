@@ -5,7 +5,7 @@ Created on Sun May 22 15:10:49 2022
 @author: Johan Odelius
 """
 import smhi
-import helpers
+from helpers import get_types #validatestring
     
 
 # %% Temperature
@@ -17,13 +17,9 @@ def TAS(station, ts, time_period='y'):
     #   station         : station id [int]
     #   ts              : timestamp
     #   time_period     : time period ('y','s'), default 'y'
-
+    
     weather_parameter = 'TemperatureMeanPastMonth'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
-    # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Mean of TemperatureMeanPastMonth
     value = filtered_weather_values.mean()
@@ -37,12 +33,10 @@ def TX(station, ts, time_period='y'):
     #   station         : station id [int]
     #   ts              : timestamp
     #   time_period     : time period ('y','s','m'), default 'y'
+    
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Max of TemperatureMaxPast24h
     value = filtered_weather_values.max()
@@ -57,12 +51,10 @@ def TN(station, ts, time_period='y'):
     #   station         : station id [int]
     #   ts              : timestamp
     #   time_period     : time period ('y','s','m'), default 'y'
+    
     weather_parameter = 'TemperatureMinPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Min of TemperatureMinPast24h
     value = filtered_weather_values.min()
@@ -79,18 +71,12 @@ def DTR(station, ts, time_period='m'):
     #   time_period     : time period ('m'), default 'm'
 
     weather_parameter = 'TemperatureMinPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    temperature_min = helpers.filter_time(weather_data, ts, time_period)
+    temperature_min = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_max = helpers.filter_time(weather_data, ts, time_period)
+    temperature_max = smhi.get_values(weather_parameter, station, ts, time_period)
    
     # Amplitude: max temperature - min temperature
     amplitude = temperature_max-temperature_min
@@ -108,12 +94,10 @@ def WarmDays(station, ts, time_period='y'):
     #   station         : station id [int]
     #   ts              : timestamp
     #   time_period     : time period ('y','s'), default 'y'
+    
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Number of days over 20 deg
     value = (filtered_weather_values > 20).sum()
@@ -128,12 +112,10 @@ def ConWarmDays(station, ts, time_period='y'):
     #   station         : station id [int]
     #   ts              : timestamp
     #   time_period     : time period ('y'), default 'y'
+    
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days in a row with temperature more than 20 deg
     number_of_days = 0
@@ -157,18 +139,12 @@ def ZeroCrossingDays(station, ts, time_period='s'):
     #   time_period     : time period ('s'), default 's'
 
     weather_parameter = 'TemperatureMinPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    temperature_min = helpers.filter_time(weather_data, ts, time_period)
+    temperature_min = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_max = helpers.filter_time(weather_data, ts, time_period)
+    temperature_max = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Min temperature less than 0 and max temperature more than 0
     if temperature_min.size>0:
@@ -219,11 +195,8 @@ def VegSeasonDayEnd(station, ts, time_period='y'):
     #   ts              : timestamp
     #   time_period     : time period ('y'), default 'y'
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
     _,veg_end = VegSeason(filtered_weather_values)
@@ -240,11 +213,8 @@ def VegSeasonDayStart(station, ts, time_period='y'):
     #   ts              : timestamp
     #   time_period     : time period ('y'), default 'y'
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
     veg_start,_ = VegSeason(filtered_weather_values)
@@ -263,11 +233,8 @@ def VegSeasonLentgh(station, ts, time_period='y', temperature=5):
     #   temperature     : temperature definition of vegseason (2,5), default is 5
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Vegperiod
     veg_start,veg_end = VegSeason(filtered_weather_values)
@@ -286,11 +253,8 @@ def FrostDays(station, ts, time_period='s'):
 
 
     weather_parameter = 'TemperatureMinPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Count days where min temperature is less than 0
     value = (filtered_weather_values < 0).sum()
@@ -307,11 +271,8 @@ def ColdDays(station, ts, time_period='s'):
     #   time_period     : time period ('s'), default 's'
 
     weather_parameter = 'TemperatureMaxPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days with max temperature less than -7
     value = (filtered_weather_values < -7).sum()
@@ -329,11 +290,8 @@ def PR(station, ts, time_period='y'):
     #   time_period     : time period ('m','y','s'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Sum of PrecipPast24hAt06
     value = filtered_weather_values.sum()
@@ -350,24 +308,18 @@ def PRRN(station, ts, time_period='y'):
     #   time_period     : time period (y','s'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Join precipitation values with type of precipitation
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
     
     # Data for days with rain
-    valid_types = helpers.get_types('Rain')
+    valid_types = get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
     
     # Sum up all during time period
@@ -385,24 +337,18 @@ def PRSN(station, ts, time_period='y'):
     #   time_period     : time period (y','s'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Join precipitation values with type of precipitation
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
      
     # Data for days with valid precipitation
-    valid_types = helpers.get_types('Snow')
+    valid_types = get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
     
     # Sum up all during time period
@@ -420,24 +366,18 @@ def SuperCooledPR(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Join precipitation values with type of precipitation
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
      
     # Cooled rain types
-    valid_types = helpers.get_types('SuperCooledRain')
+    valid_types = get_types('SuperCooledRain')
     
     # Data for days with valid precipitation
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types),'Value'].groupby(level=0).first()
@@ -457,11 +397,8 @@ def PR7Dmax(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Sum of PrecipPast24hAt06 for rolling window of 7 days (sum or max??)
     values = filtered_weather_values.rolling(7).sum()
@@ -479,11 +416,8 @@ def PRmax(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Max of PrecipPast24hAt06
     value = filtered_weather_values.max()
@@ -500,24 +434,18 @@ def PRSNmax(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Join precipitation values with type of precipitation
     precip_data = precip_values.to_frame().join(precip_types.rename('Type'))
   
     # Snow types
-    valid_types = helpers.get_types('Snow') 
+    valid_types = get_types('Snow') 
     
     # precip_data.loc[precip_data['Type'].isin(valid_types)].groupby('Type').max()
     
@@ -539,11 +467,8 @@ def PRgt10Days(station, ts, time_period='y'):
     #   time_period     : time period ('s','y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of more than 10 mm precip
     value = (filtered_weather_values > 10).sum()
@@ -559,11 +484,8 @@ def PRgt25Days(station, ts, time_period='y'):
     #   time_period     : time period ('s','y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of more than 25 mm precip
     value = (filtered_weather_values > 25).sum()
@@ -580,11 +502,8 @@ def DryDays(station, ts, time_period='m'):
     #   time_period     : time period ('m'), default 'm'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Days of less than 1 mm precip
     if filtered_weather_values.size>0:
@@ -604,11 +523,8 @@ def SncDays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'SnowDepthPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Number of days with snow
     if filtered_weather_values.size>0:
@@ -627,11 +543,8 @@ def SNWmax(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'SnowDepthPast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period)
+    filtered_weather_values = smhi.get_values(weather_parameter, station, ts, time_period)
 
     # Maximum snow depth
     value = filtered_weather_values.max()
@@ -649,11 +562,8 @@ def SfcWind(station, ts, time_period='y'):
     #   time_period     : time period ('s','y'), default 'y'
 
     weather_parameter = 'WindSpeed'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period, idx='Date (UTC)')
+    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Daily max of mean windspeed observations
     values = filtered_weather_values.resample('1D').max()
@@ -672,11 +582,8 @@ def WindGustMax(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'WindGust'  # Wind Gust
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period, idx='Date (UTC)')
+    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Daily max of wind gust (byvind) observations
     values = filtered_weather_values.resample('1D').max()
@@ -694,11 +601,8 @@ def WindyDays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'WindGust'  # Wind Gust
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    filtered_weather_values = helpers.filter_time(weather_data, ts, time_period, idx='Date (UTC)')
+    filtered_weather_values = smhi.get_values(weather_parameter, ts, time_period, idx='Date (UTC)')
     
     # Number of days with daily max of wind gust (byvind) above 21
     if filtered_weather_values.size>0:
@@ -719,30 +623,21 @@ def ColdRainDays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Rain')
+    # valid_types = get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Days with precip given temperature interval
@@ -765,30 +660,21 @@ def ColdRainGT10Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Rain')
+    # valid_types = get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 10 given temperature interval
@@ -812,30 +698,21 @@ def ColdRainGT20Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
-    # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+   # Filter based on failure time and time period
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Rain')
+    # valid_types = get_types('Rain')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 20 given temperature interval
@@ -858,30 +735,21 @@ def WarmSnowDays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Snow')
+    # valid_types = get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Days with precip given temperature interval
@@ -904,30 +772,21 @@ def WarmSnowGT10Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Snow')
+    # valid_types = get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 10 given temperature interval
@@ -951,30 +810,21 @@ def WarmSnowGT20Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # weather_parameter = 'PrecipPast24hAt18'
-    # parameter_id = smhi.get_param_value(weather_parameter, station)
-    # weather_data = smhi.get_corrected(parameter_id, station)
-
     # # Filter based on failure time and time period
-    # precip_types = helpers.filter_time(weather_data, ts, time_period)
+    # precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # precip_data = precip_data.join(precip_types.rename('Type'))
-    # valid_types = helpers.get_types('Snow')
+    # valid_types = get_types('Snow')
     # precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)]
     
     # Number of days of precip > 20 given temperature interval
@@ -998,32 +848,23 @@ def ColdPRRNdays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = helpers.get_types('Rain')
+    valid_types = get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval
@@ -1046,32 +887,23 @@ def ColdPRRNgt10Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = helpers.get_types('Rain')
+    valid_types = get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain more than 10 mm given temperature interval
@@ -1094,32 +926,23 @@ def ColdPRRNgt20Days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
    
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with rain
-    valid_types = helpers.get_types('Rain')
+    valid_types = get_types('Rain')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain more than 20 mm given temperature threshold
@@ -1143,32 +966,23 @@ def WarmPRSNdays(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with snow
-    valid_types = helpers.get_types('Snow')
+    valid_types = get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval
@@ -1191,32 +1005,23 @@ def WarmPRSNgt10days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
     
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with snow
-    valid_types = helpers.get_types('Snow')
+    valid_types = get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature threshold
@@ -1239,32 +1044,23 @@ def WarmPRSNgt20days(station, ts, time_period='y'):
     #   time_period     : time period ('y'), default 'y'
 
     weather_parameter = 'PrecipPast24hAt06'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_values = helpers.filter_time(weather_data, ts, time_period)
+    precip_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     weather_parameter = 'PrecipPast24hAt18'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-
     # Filter based on failure time and time period
-    precip_types = helpers.filter_time(weather_data, ts, time_period)
+    precip_types = smhi.get_values(weather_parameter, station, ts, time_period)
 
     weather_parameter = 'TemperaturePast24h'
-    parameter_id = smhi.get_param_value(weather_parameter, station)
-    weather_data = smhi.get_corrected(parameter_id, station)
-    
     # Filter based on failure time and time period
-    temperature_values = helpers.filter_time(weather_data, ts, time_period)
+    temperature_values = smhi.get_values(weather_parameter, station, ts, time_period)
     
     # Add temperture values to the precipitaion values
     precip_data = precip_values.to_frame().join(temperature_values.rename('Temperature'))
     # Add precipitaion type
     precip_data = precip_data.join(precip_types.rename('Type'))
     # Filter out days with snow
-    valid_types = helpers.get_types('Snow')
+    valid_types = get_types('Snow')
     precip_valid = precip_data.loc[precip_data['Type'].isin(valid_types)].groupby(level=0).first()
     
     # Number of days of rain given temperature interval
