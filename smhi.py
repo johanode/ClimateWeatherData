@@ -111,11 +111,11 @@ def get_corrected(param, station, translate=True):
         
     return df
 
-def get_values(param, station, ts=None, time_period=None):
+def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value'):
     parameter_id = get_param_value(param, station)
     data = get_corrected(parameter_id, station)
     if ts is not None:
-        values = helpers.filter_time(data, ts, time_period)
+        values = helpers.filter_time(data, ts, time_period, idx=idx, col=col)
     else:
         values = data['Values']
     return values
