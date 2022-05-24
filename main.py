@@ -16,11 +16,19 @@ print(stations.head())
 
 # Print selected weather station
 station = 162860
-print(stations.set_index('id').loc[station,'name'])
+station_name = stations.set_index('id').loc[station,'name']
+print(station_name)
 
 # Download historical data from station for parameter
 data = smhi.get_corrected(param_id, station)
 print(data.head())
+
+# Check if data available for parameter for station
+if smhi.isin_station(param_id, station):
+    print('%s (id=%d) is avalable in station %s (id=%d)' % (param, param_id, station_name, station))
+else:
+    print('%s (id=%d) is NOT avalable in station %s (id=%d)' % (param, param_id, station_name, station))
+
 
 # Get parameter values for a station at a certain time
 ts = pd.to_datetime('2012-04-03').date()
@@ -35,9 +43,21 @@ print(values)
 
 
 # Get climate feature/indicator for a station at a certain time, e.g. failure time
-# Lst indicators
+# List indicators
 indicators = smhi.list_indicators()
 print(indicators.head())
+
+# List stations where climate data is available
+# This will be update with an time period
+valid_stations = climate.list_stations()
+
+# Check if data avaiable for station to compute indicators
+# This will be update with an time period
+if climate.isin_station(station): # station in valid_stations['id'].to_list()
+    print('Data for all climate indicators is avalable for station %s (id=%d)' % (station_name, station))
+else:
+    print('Climate data is NOT avalable for station %s (id=%d)' % (station_name, station))
+
 
 # e.g. WarmDays (Days with temperature more than 20 deg)
 # defualut time period is 'y'
