@@ -1,19 +1,47 @@
-
 import datetime
-import sys
-import logging
+# import sys
+# import logging
 import json
 import requests
 
 
 # functions
 def api_return_data(adr):
-    """ initate API call and return the JSON data """
     # initiate the call
     req_obj = requests.get(adr)
     # try to get the json data (exceptions will be catched later)
     json_data = req_obj.json()
     return json_data
+
+def validatestring(inputStr, validStrings, only_forward=False):
+    # matchedStr = validatestring(inputStr,validStrings) 
+    # checks the validity of inputStr against validStrings. 
+    # The text is valid if it is an unambiguous, 
+    # case-insensitive match to any element in validStrings.
+    
+    outputStrings = set()
+    checkStr = inputStr.lower()
+    validStrings = set(validStrings)
+    compareStrings = [x.lower() for x in validStrings]
+    for compareStr, validStr in zip(compareStrings, validStrings):
+        if checkStr == compareStr:
+            outputStrings = {validStr}
+            break
+        elif only_forward:
+            if compareStr.startswith(checkStr) or checkStr.startswith(compareStr):
+                outputStrings.update({validStr})               
+        # elif compareStr.startswith(checkStr) or compareStr.endswith(checkStr): 
+            # outputStrings.update({validStr})
+        elif checkStr in compareStr or compareStr in checkStr:
+            outputStrings.update({validStr})
+            
+    
+    if len(outputStrings)==0:
+        raise ValueError('The input did not match any of the valid values.')
+    elif len(outputStrings)>1:
+        raise ValueError('The input matched more than one valid value.')
+     
+    return outputStrings.pop()
 
 def get_season(ts):
     # Define month for the seasons
@@ -30,10 +58,31 @@ def get_season(ts):
     return m
 
 
-def get_filter(ts, time_period):
-    if time_period == 'm':
+def get_filter(ts, time_period='day'):
+    #Validate input time_period
+    time_period = validatestring(time_period, ['day','week','month','season','year'], only_forward=True)
+    
+    if time_period == 'day':
+        if isinstance(ts,datetime.date):
+            time_filter = [str(ts)]
+        else:
+            time_filter = [str(ts.date())]
+    
+    elif time_period == 'week':
+        # w = ts.isocalendar().week
+        d = ts.isocalendar().weekday
+        dt = datetime.timedelta(1)
+        ts1 = ts-(d-1)*dt
+        ts2 = ts+(7-d)*dt
+        time_filter = [
+            '%d-%02d-%02d' % (ts1.year, ts1.month, ts1.day),
+            '%d-%02d-%02d' % (ts2.year, ts2.month, ts2.day)
+            ]
+    
+    elif time_period == 'month':
         time_filter = ['%d-%02d' % (ts.year, ts.month)]
-    elif time_period == 's':
+    
+    elif time_period == 'season':
         m = get_season(ts)
         if 12 in m:
             m1 = '%d-%02d' % (ts.year-1, 12)
@@ -41,12 +90,13 @@ def get_filter(ts, time_period):
             m1 = '%d-%02d' % (ts.year, m[0])
         m2 = '%d-%02d' % (ts.year, m[-1])
         time_filter = [m1, m2]
-    elif time_period == 'y':
+    
+    elif time_period == 'year':
         time_filter = [str(ts.year)]
-    elif isinstance(ts,datetime.date):
-        time_filter = [str(ts)]
+    
     else:
-        time_filter = [str(ts.date())]
+        raise ValueError('The input time period did not match any of ''day'', ''week'', ''month'', ''season'', ''year''')
+
         
     return time_filter
 
@@ -78,7 +128,7 @@ def get_types(cat):
     else: 
         return []
     
-def filter_time(df, ts, time_period, idx='Date', col='Value'):
+def filter_time(df, ts, time_period, idx, col):
     time_filter = get_filter(ts, time_period)
 
     if len(time_filter)>=2:
