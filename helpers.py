@@ -129,17 +129,20 @@ def get_types(cat):
         return []
     
 def filter_time(df, ts, time_period, idx, col):
-    time_filter = get_filter(ts, time_period)
-
-    if len(time_filter)>=2:
-        df_filter = df.set_index(idx).loc[time_filter[0]:time_filter[-1]]
-    else:
-        df_filter = df.set_index(idx).loc[time_filter[0]]
-    if col is not None:
-        return df_filter[col]
-    else:
-        return df_filter
+    if ts in df[idx].values or (df[idx]-ts).abs().min().days<df[idx].diff().mean().days:
+        time_filter = get_filter(ts, time_period)
     
+        if len(time_filter)>=2:
+            df_filter = df.set_index(idx).loc[time_filter[0]:time_filter[-1]]
+        else:
+            df_filter = df.set_index(idx).loc[time_filter[0]]
+        if col is not None:
+            return df_filter[col]
+        else:
+            return df_filter
+    else:
+        return df.loc[[]]
+        
     
 def get_parameters():
     # See https://opendata.smhi.se/apidocs/metobs/parameter.html
