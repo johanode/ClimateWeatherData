@@ -79,7 +79,7 @@ def get_corrected(param, station, translate=True):
     
     # download the csv data
     if param in [3,4,21]: #[Windspeed, WindDirection, WindGust]
-        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)']], keep_date_col=True)
+        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
         df.drop(labels='Tid (UTC)', axis=1, inplace=True)
         k_value = 2
         df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
