@@ -59,6 +59,34 @@ def isin_station(station, parameter_type='all'):
     df_stations = list_stations(parameter_type)
     return station in df_stations['id'].to_list()
 
+def get_stations(station, ts, time_period='y', parameter_type='all'):
+    if parameter_type.lower() == 'all':
+        parameter_type = climate_weather_parameters.keys()
+    
+    # Loop the parameters and update stations list with intersection
+    data = {}
+    for ty in parameter_type:
+        for k,param in enumerate(climate_weather_parameters[ty]):
+            values = smhi.get_values(param, station, ts=ts, time_period=time_period)
+            print(param)
+            print(values.size)
+            if values.size>0:
+                if k==0:
+                    df = values.resample('M').first().rename(param).to_frame()
+                else:
+                    df = df.join(values.resample('M').first().rename(param))
+            else:
+                df = df.loc[[]]
+                break
+        data[ty] = df
+    
+
+    # Filter out valid stations
+    # df_output = df_stations.set_index('id').loc[stations,cols].reset_index()
+    
+    return df
+
+
 # %% Temperature
 
 # Medeltemperatur
