@@ -58,46 +58,57 @@ def get_season(ts):
     return m
 
 
-def get_filter(ts, time_period='day'):
+def get_filter(ts, time_period='day', direction=None):
     #Validate input time_period
-    time_period = validatestring(time_period, ['day','week','month','season','year'], only_forward=True)
+    if direction is None:
+        time_period = validatestring(time_period, ['day','week','month','season','year'], only_forward=True)
     
-    if time_period == 'day':
-        if isinstance(ts,datetime.date):
-            time_filter = [str(ts)]
-        else:
-            time_filter = [str(ts.date())]
-    
-    elif time_period == 'week':
-        # w = ts.isocalendar().week
-        d = ts.isocalendar().weekday
-        dt = datetime.timedelta(1)
-        ts1 = ts-(d-1)*dt
-        ts2 = ts+(7-d)*dt
-        time_filter = [
-            '%d-%02d-%02d' % (ts1.year, ts1.month, ts1.day),
-            '%d-%02d-%02d' % (ts2.year, ts2.month, ts2.day)
-            ]
-    
-    elif time_period == 'month':
-        time_filter = ['%d-%02d' % (ts.year, ts.month)]
-    
-    elif time_period == 'season':
-        m = get_season(ts)
-        if 12 in m:
-            m1 = '%d-%02d' % (ts.year-1, 12)
-        else:
-            m1 = '%d-%02d' % (ts.year, m[0])
-        m2 = '%d-%02d' % (ts.year, m[-1])
-        time_filter = [m1, m2]
-    
-    elif time_period == 'year':
-        time_filter = [str(ts.year)]
-    
-    else:
-        raise ValueError('The input time period did not match any of ''day'', ''week'', ''month'', ''season'', ''year''')
-
+        if time_period == 'day':
+            if type(ts) is datetime.date:
+                time_filter = [str(ts)]
+            else:
+                time_filter = [str(ts.date())]
         
+        elif time_period == 'week':
+            # w = ts.isocalendar().week
+            d = ts.isocalendar().weekday
+            dt = datetime.timedelta(1)
+            ts1 = ts-(d-1)*dt
+            ts2 = ts+(7-d)*dt
+            time_filter = [
+                '%d-%02d-%02d' % (ts1.year, ts1.month, ts1.day),
+                '%d-%02d-%02d' % (ts2.year, ts2.month, ts2.day)
+                ]
+        
+        elif time_period == 'month':
+            time_filter = ['%d-%02d' % (ts.year, ts.month)]
+        
+        elif time_period == 'season':
+            m = get_season(ts)
+            if 12 in m:
+                m1 = '%d-%02d' % (ts.year-1, 12)
+            else:
+                m1 = '%d-%02d' % (ts.year, m[0])
+            m2 = '%d-%02d' % (ts.year, m[-1])
+            time_filter = [m1, m2]
+        
+        elif time_period == 'year':
+            time_filter = [str(ts.year)]
+        
+        else:
+            raise ValueError('The input time period did not match any of ''day'', ''week'', ''month'', ''season'', ''year''')
+
+    else:
+        direction = validatestring(direction, ['backward'], only_forward=True)
+        if direction == 'backward':
+            if isinstance(time_period, datetime.timedelta):
+                time_filter = [(ts-time_period).isoformat(), ts.isoformat()]
+            elif isinstance(time_period, str):
+                from pandas import to_timedelta
+                time_filter = [(ts-to_timedelta(time_period)).isoformat(), ts.isoformat()]
+            else: 
+                ValueError('The input time_period is not in valid format')
+            
     return time_filter
 
 def get_types(cat):
@@ -128,10 +139,21 @@ def get_types(cat):
     else: 
         return []
     
-def filter_time(df, ts, time_period, idx, col):
-    if ts in df[idx].values or (df[idx]-ts).abs().min().days<df[idx].diff().mean().days:
-        time_filter = get_filter(ts, time_period)
-    
+def filter_time(df, ts, time_period, idx, col, direction=None):
+    #Check if data is available the same day
+    try:
+        if type(ts) is datetime.date:
+            value = df.set_index(idx).loc[ts.isoformat()]
+        else:
+            value = df.set_index(idx).loc[ts.date().isoformat()]
+            #is_available = ts in df[idx].values or (df[idx]-ts).abs().min().days<df[idx].diff().mean().days
+        is_available = value.size>0
+    except KeyError:
+        print('KeyError')
+        is_available = False     
+   
+    if is_available:
+        time_filter = get_filter(ts, time_period, direction=direction)
         if len(time_filter)>=2:
             df_filter = df.set_index(idx).loc[time_filter[0]:time_filter[-1]]
         else:

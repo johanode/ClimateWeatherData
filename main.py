@@ -31,13 +31,13 @@ else:
 
 
 # Get parameter values for a station at a certain time
-ts = pd.to_datetime('2012-04-03').date()
+ts = pd.to_datetime('2012-04-03 11:00') #.date()
 values = smhi.get_values(param_id, station, ts)
 print(values)
 
 
 # Get parameter values for a station at a certain time period
-time_period = 'm' #('y' : year, 's' : season, 'm' : month)
+time_period = 'w' #('y' : year, 's' : season, 'm' : month)
 values = smhi.get_values(param_id, station, ts, time_period)
 print(values)
 

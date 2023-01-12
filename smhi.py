@@ -115,7 +115,7 @@ def get_corrected(param, station, translate=True):
         
     return df
 
-def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value', check_station=False):
+def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value', check_station=False, direction=None):
     # validate input weather parameter (param)
     parameter_id = get_param_value(param)
     
@@ -130,7 +130,7 @@ def get_values(param, station, ts=None, time_period='day', idx='Date', col='Valu
     # if timestamp in input filter data based on timestamp and time period
     # idx specified index column and col data column
     if ts is not None:
-        values = helpers.filter_time(data, ts, time_period, idx=idx, col=col)
+        values = helpers.filter_time(data, ts, time_period, idx=idx, col=col, direction=direction)
     else:
         values = data['Values']
         
