@@ -145,14 +145,26 @@ def filter_time(df, ts, time_period, idx, col, direction=None):
         if type(ts) is datetime.date:
             value = df.set_index(idx).loc[ts.isoformat()]
         else:
-            value = df.set_index(idx).loc[ts.date().isoformat()]
+            value = df.set_index(idx).loc[ts.isoformat()]
+            # value = df.set_index(idx).loc[ts.date().isoformat()]
             #is_available = ts in df[idx].values or (df[idx]-ts).abs().min().days<df[idx].diff().mean().days
         is_available = value.size>0
     except KeyError:
-        print('KeyError')
-        is_available = False     
+        i1 = df.columns.str.startswith('From Date')
+        i2 = df.columns.str.startswith('To Date')
+        if i1.any() and i2.any():
+            idx1 = df.columns[i1.argmax()]
+            idx2 = df.columns[i2.argmax()]
+            qrstr = "`{0}` <= '{2}' and `{1}` >= '{2}'".format(idx1, idx2, ts.isoformat())
+        else:
+            qrstr = "{0} == '{1}'".format(idx, ts.isoformat())
+        value = df.query(qrstr)
+        is_available = value.size>0
+        # is_available = False     
    
-    if is_available:
+    if time_period is None:
+        return value[col]
+    elif is_available:
         time_filter = get_filter(ts, time_period, direction=direction)
         if len(time_filter)>=2:
             df_filter = df.set_index(idx).loc[time_filter[0]:time_filter[-1]]
@@ -163,7 +175,8 @@ def filter_time(df, ts, time_period, idx, col, direction=None):
         else:
             return df_filter
     else:
-        return df.loc[[]]
+        #return df.loc[[]]
+        return value[col]
         
     
 def get_parameters():

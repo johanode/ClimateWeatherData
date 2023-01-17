@@ -9,7 +9,7 @@ parameters = smhi.list_parameters()
 print(parameters.head())
 
 # Find stations with certain parameter
-param = 'TemperaturePast24h'
+param = 'TemperaturePast1h'
 param_id = smhi.get_param_value(param)
 stations = smhi.list_stations(param_id)
 print(stations.head())
@@ -32,7 +32,7 @@ else:
 
 # Get parameter values for a station at a certain time
 ts = pd.to_datetime('2012-04-03 11:00') #.date()
-values = smhi.get_values(param_id, station, ts)
+values = smhi.get_values(param_id, station, ts, idx='Date (UTC)')
 print(values)
 
 

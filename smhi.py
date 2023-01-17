@@ -78,12 +78,27 @@ def get_corrected(param, station, translate=True):
     param = get_param_value(param)
     
     # download the csv data
-    if param in [3,4,21]: #[Windspeed, WindDirection, WindGust]
+    if param in [1]: #[TemperaturePast1h]
+        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
+        df.drop(labels='Tid (UTC)', axis=1, inplace=True)
+        k_value = 2
+        df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
+    elif param in [6]: #[Humidity]
+        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
+        df.drop(labels='Tid (UTC)', axis=1, inplace=True)
+        k_value = 2
+        df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
+    elif param in [3,4,21]: #[Windspeed, WindDirection, WindGust]
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
         df.drop(labels='Tid (UTC)', axis=1, inplace=True)
         k_value = 2
         df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
     elif param in [8]: #[SnowDepthPast24h]
+        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
+        df.drop(labels='Tid (UTC)', axis=1, inplace=True)
+        k_value = 2
+        df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
+    elif param in [7]: #[PrecioPast1h]
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
         df.drop(labels='Tid (UTC)', axis=1, inplace=True)
         k_value = 2
@@ -115,7 +130,7 @@ def get_corrected(param, station, translate=True):
         
     return df
 
-def get_values(param, station, ts=None, time_period='day', idx='Date', col='Value', check_station=False, direction=None):
+def get_values(param, station, ts=None, time_period=None, idx='Date', col='Value', check_station=False, direction=None):
     # validate input weather parameter (param)
     parameter_id = get_param_value(param)
     
