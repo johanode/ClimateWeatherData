@@ -26,7 +26,7 @@ climate_weather_parameters = {
     }
 climate_weather_parameters['combination'] = climate_weather_parameters['temperature'] + climate_weather_parameters['precipitation']
 
-def list_stations(parameter_type='all'):
+def list_stations(parameter_type='all', ts=None):
     if parameter_type.lower() == 'all':
         # list all climate paramters
         parameters = []
@@ -41,17 +41,18 @@ def list_stations(parameter_type='all'):
     paramsset = set(parameters)
     
     # Find stations for first parameter
-    df_stations = smhi.list_stations(paramsset.pop())
+    df_stations = smhi.list_stations(paramsset.pop(), ts=ts)
     # Make stations id a set
     stations = set(df_stations['id'])
     # Loop the rest of parameters and update stations list with intersection
     for param in paramsset:
-        stations = stations.intersection(smhi.list_stations(param, col='id'))
+        df = smhi.list_stations(param, ts=ts)
+        stations = stations.intersection(df['id'].to_list())
     
     # Output columns of dataframe
     cols = ['name','latitude','longitude','active','from','to']
     # Filter out valid stations
-    df_output = df_stations.set_index('id').loc[stations,cols].reset_index()
+    df_output = df_stations.set_index('id').loc[list(stations),cols].reset_index()
     
     return df_output
     
@@ -94,7 +95,7 @@ def TAS(station, ts, time_period='y'):
     # Medeltemperatur (TAS)
     # Input
     #   station         : station id [int]
-    #   ts              : timestamp
+    #   ts              : timestamp ('2020-01-10')
     #   time_period     : time period ('y','s'), default 'y'
     
     weather_parameter = 'TemperatureMeanPastMonth'

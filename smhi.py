@@ -7,9 +7,10 @@ import pandas as pd
 import json
 import logging
 import numbers
+# import csv
 
 
-def list_stations(param, col=None):
+def list_stations(param, ts=None):
     # validate parameter input
     param = get_param_value(param)
     
@@ -20,19 +21,20 @@ def list_stations(param, col=None):
     # send request and get data
     data = helpers.api_return_data(adr_full)
 
-    if col is not None:
-        data_list = [s[col] for s in data["station"]]
-        return data_list
-    else:
-        # -- gather and wrangle the data about avaliable stations
-        # convert the JSON data to a pandas DF
-        df = pd.DataFrame(data["station"])
-        
-        # fix the date and time variables into something readable
-        for col in ['from', 'to', 'updated']:
-            df[col] = pd.to_datetime(df[col], unit="ms")
+    # -- gather and wrangle the data about avaliable stations
+    # convert the JSON data to a pandas DF
+    df = pd.DataFrame(data["station"])
+    
+    # fix the date and time variables into something readable
+    for col in ['from', 'to', 'updated']:
+        df[col] = pd.to_datetime(df[col], unit="ms")
 
+    if ts is None:
         return(df)
+    else:
+        # filter based on timestamp
+        qrstr = "`from` <= '{0}' and `to` >= '{0}'".format(pd.to_datetime(ts).isoformat())
+        return df.query(qrstr)
 
 
 def list_parameters():
@@ -62,20 +64,38 @@ def isin_station(parameter, station):
     parameter_id = get_param_value(parameter)
     
     # check if parameter is available on station
-    valid_stations = list_stations(parameter_id, col='id')
-    
+    df_stations = list_stations(parameter_id)
+    valid_stations = df_stations['id'].to_list()
     return station in valid_stations
 
 def get_time_period(ts, time_period):
+    if isinstance(time_period, str):
+        ts = pd.to_datetime(ts)
     return tuple(helpers.get_filter(ts, time_period))
 
 def get_corrected(param, station, translate=True):
+    # validate input weather parameter (param)
+    param = get_param_value(param)
+    
     # create the API adress
     adr = api_endpoints.ADR_CORRECTED
     adr_full = adr.format(parameter = param, station = station)
     
-    # validate input weather parameter (param)
-    param = get_param_value(param)
+    # response = requests.get(adr_full).text
+    # lines = response.splitlines()
+    # header_row = 9
+    # for k, line in enumerate(lines):
+    #     print(k)
+    #     print(line)
+    #     if k>=header_row and 'Datum' in line:
+    #         header_row = k
+    #         break
+    
+    # skip_rows = header_row-1
+    
+    # usecols=lines[header_row].split(';')[0:4]
+    # d = csv.DictReader(lines[header_row:], delimiter=';', fieldnames=usecols)
+    # l = list(d)
     
     # download the csv data
     if param in [1]: #[TemperaturePast1h]
@@ -106,6 +126,11 @@ def get_corrected(param, station, translate=True):
     elif param in [18]: #[PrecipTypePast24h] 
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3,4], delimiter=";", parse_dates=[1,2,3])
         k_value = 3
+    elif param in [40]: #GroundCondition
+        df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3], delimiter=";", parse_dates=[['Datum', 'Tid (UTC)'],'Datum'], keep_date_col=True)
+        df.drop(labels='Tid (UTC)', axis=1, inplace=True)
+        k_value = 2
+        df.iloc[:,k_value] = pd.to_numeric(df.iloc[:,k_value])
     else:
         df = pd.read_csv(filepath_or_buffer= adr_full, skiprows= 9, usecols=[0,1,2,3,4], delimiter=";", parse_dates=[1,2,3])
         k_value = 3
