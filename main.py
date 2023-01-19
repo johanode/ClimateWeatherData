@@ -31,9 +31,8 @@ print(data.head())
 if smhi.isin_station(param_id, station):
     print('%s (id=%d) is avalable in station %s (id=%d)' % (param, param_id, station_name, station))
 else:
-    print('%s (id=%d) is NOT avalable in station %s (id=%d)' % (param, param_id, station_name, station))
-
-
+    print('%s (id=%d) is NOT avalable in station %s (id=%d)' % (param, param_id, station_name, station))        
+    
 # Get parameter values for a station at a certain time
 # 24h data 
 ts = '2012-04-03'
@@ -43,7 +42,6 @@ print(values)
 ts = '2012-04-03 11:00'
 values = smhi.get_values(param_id, station, ts, idx='Date (UTC)')
 print(values)
-
 
 # Get parameter values for a station at a certain time period
 ts = '2012-04-03'
@@ -91,7 +89,6 @@ if climate.isin_station(station): # station in valid_stations['id'].to_list()
     print('Data for all climate indicators is avalable for station %s (id=%d)' % (station_name, station))
 else:
     print('Climate data is NOT avalable for station %s (id=%d)' % (station_name, station))
-
 
 # e.g. WarmDays (Days with temperature more than 20 deg)
 # defualut time period is 'y'
