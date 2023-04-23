@@ -114,29 +114,53 @@ def get_filter(ts, time_period='day', direction=None):
             ValueError('The input time_period is not in valid format')
               
     else:
-        direction = validatestring(direction, ['backward'], only_forward=True)
-        if direction == 'backward':
-            if isinstance(time_period, datetime.timedelta):
+        direction = validatestring(direction, ['backward', 'forward'], only_forward=True)
+        
+        if isinstance(time_period, datetime.timedelta):
+            if direction == 'forward':
+                time_filter = [ts.isoformat(), (ts+time_period).isoformat()]
+            else:
                 time_filter = [(ts-time_period).isoformat(), ts.isoformat()]
-            elif isinstance(time_period, str):
-                from pandas import to_timedelta
-                try:
+            
+        
+        elif isinstance(time_period, str):
+            from pandas import to_timedelta, to_datetime
+            
+            try:
+                if direction == 'forward':
+                    time_filter = [ts.isoformat(), (ts+to_timedelta(time_period)).isoformat()]
+                else:
                     time_filter = [(ts-to_timedelta(time_period)).isoformat(), ts.isoformat()]
-                except ValueError:
-                    time_period = validatestring(time_period, ['day','week','month','year'], only_forward=True)
-                    if time_period == 'day':
-                        time_period = '1d'
-                    elif time_period == 'week':
-                        time_period = '1w'
-                    elif time_period == 'month':
-                        time_period = '31d'
-                    elif time_period == 'year':
-                        time_period = '365d'
+            
+            except ValueError:
+                time_period = validatestring(time_period, ['day','week','month','season','year'], only_forward=True)
+                if time_period == 'day':
+                    time_period = '1d'
+                elif time_period == 'week':
+                    time_period = '1w'
+                elif time_period == 'month':
+                    time_period = '31d'
+                elif time_period == 'year':
+                    time_period = '365d'
+                elif time_period == 'season':
+                    m = get_season(ts)
+                    if direction=='forward':
+                         if m[-1]<ts.month:
+                             time_period = to_datetime('%d-%02d' % (ts.year+1, m[-1]))-ts  
+                         else:
+                             time_period = to_datetime('%d-%02d' % (ts.year, m[-1]))-ts    
                     else:
-                        raise ValueError('The input time period did not match any of ''day'', ''week'', ''month'', ''year''')
-                    time_filter = [(ts-to_timedelta(time_period)).isoformat(), ts.isoformat()]    
-            else: 
-                raise ValueError('The input time_period is not in valid format')
+                        if m[0]>ts.month:
+                            time_period = ts-to_datetime('%d-%02d' % (ts.year-1, m[0]))
+                        else:
+                            time_period = ts-to_datetime('%d-%02d' % (ts.year, m[0]))          
+                else:
+                    raise ValueError('The input time period did not match any of ''day'', ''week'', ''month'', ''year''')
+                
+                if direction=='forward':
+                    time_filter = [ts.isoformat(), (ts+to_timedelta(time_period)).isoformat()]  
+                else:
+                    time_filter = [(ts-to_timedelta(time_period)).isoformat(), ts.isoformat()]  
             
     return time_filter
 
@@ -181,7 +205,7 @@ def filter_time(df, ts, time_period, idx, col, direction=None):
                 ts = (ts[0].isoformat(), ts[1].isoformat())
         else:
             from pandas import DatetimeIndex
-            if isinstance(ts,DatetimeIndex):
+            if isinstance(ts, DatetimeIndex):
                 ts = (ts[0].isoformat(), ts[1].isoformat())
             
         # Use index to filter timestamp
