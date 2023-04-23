@@ -228,7 +228,12 @@ def ZeroCrossingDays(station, ts, time_period='s'):
 
     # Min temperature less than 0 and max temperature more than 0
     if temperature_min.size>0:
-        value = ((temperature_min < 0) & (temperature_max > 0)).sum()
+        if isinstance(ts, (list, tuple)):
+            if time_period == 's':
+                time_period = '3M'
+            value = ((temperature_min < 0) & (temperature_max > 0)).resample(time_period).sum()
+        else:
+            value = ((temperature_min < 0) & (temperature_max > 0)).sum()
     else:
         value = float('NaN')
 
