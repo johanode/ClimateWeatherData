@@ -287,6 +287,6 @@ def get_values(param, station, ts=None, time_period=None, idx='Date', col='Value
     if ts is not None:
         values = helpers.filter_time(data, ts, time_period, idx=idx, col=col, direction=direction)
     else:
-        values = data['Values']
+        values = data[col]
         
     return values
