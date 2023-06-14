@@ -237,7 +237,10 @@ def filter_time(df, ts, time_period, idx, col, direction=None):
         is_available = value.size>0
         
     if time_period is None:
-        return value[col]
+        if col is not None:
+            return value[col]
+        else:
+            return value
     
     elif is_available:
         time_filter = get_filter(ts[0], time_period, direction=direction)
