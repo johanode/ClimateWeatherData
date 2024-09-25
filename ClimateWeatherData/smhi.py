@@ -1,11 +1,10 @@
 #See also https://github.com/thebackman/SMHI
 
-import api_endpoints
-import helpers
+from ClimateParameters import api_endpoints, helpers
 import requests
 import pandas as pd
-import json
-import logging
+#import json
+#import logging
 import numbers
 import csv
 
@@ -41,9 +40,47 @@ def list_parameters():
     df_parameters = pd.DataFrame(helpers.get_parameters())
     return df_parameters
 
-def list_indicators():
-    df_indicators = pd.DataFrame(helpers.get_indicators())
-    return df_indicators
+
+def get_station_info(station_input, param_id=None, ts=None):
+    """
+    Return station ID if station name is provided, or station name if station ID is provided.
+    
+    Parameters:
+    - station_input: Either the station name (str) or station ID (int).
+    - param_id: Optional parameter ID to filter stations by. If not provided, defaults to 'TemperaturePast24h'.
+    - ts: Optional timestamp to filter stations by date.
+
+    Returns:
+    - station_name (str) if station ID is provided.
+    - station_id (int) if station name is provided.
+    """
+    # If no param_id is provided, use 'TemperaturePast24h' as the default
+    if param_id is None:
+        param = 'TemperaturePast24h'
+        param_id = get_param_value(param)
+    
+    # Get all stations for the given parameter and optional timestamp
+    stations = list_stations(param_id, ts)
+
+    # If the input is a station ID (int), return the corresponding station name
+    if isinstance(station_input, int):
+        try:
+            station_name = stations.set_index('id').loc[station_input, 'name']
+            return station_name
+        except KeyError:
+            raise ValueError(f"Station ID {station_input} not found.")
+    
+    # If the input is a station name (str), return the corresponding station ID
+    elif isinstance(station_input, str):
+        try:
+            station_id = stations.set_index('name').loc[station_input, 'id']
+            return station_id
+        except KeyError:
+            raise ValueError(f"Station name '{station_input}' not found.")
+    
+    else:
+        raise ValueError("station_input must be either a station name (str) or station ID (int).")
+
 
 def get_param_value(parameter):
     # check if parameter isnumeric

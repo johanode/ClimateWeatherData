@@ -4,8 +4,9 @@ Created on Sun May 22 15:10:49 2022
 
 @author: Johan Odelius
 """
-import smhi
-from helpers import get_types, validatestring
+from ClimateParameters import smhi
+from ClimateParameters.helpers import get_indicators, get_types, validatestring
+
     
 # sub functions
 climate_weather_parameters = {
@@ -25,6 +26,11 @@ climate_weather_parameters = {
         ]
     }
 climate_weather_parameters['combination'] = climate_weather_parameters['temperature'] + climate_weather_parameters['precipitation']
+
+def list_indicators():
+    import pandas as pd
+    df_indicators = pd.DataFrame(get_indicators())
+    return df_indicators
 
 def list_stations(parameter_type='all', ts=None):
     if parameter_type.lower() == 'all':
