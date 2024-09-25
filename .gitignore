@@ -1,3 +1,5 @@
 
 *.log
 *pycach*/
+versions/
+development/
