@@ -4,8 +4,8 @@ Created on Sun May 22 15:10:49 2022
 
 @author: Johan Odelius
 """
-from ClimateParameters import smhi
-from ClimateParameters.helpers import get_indicators, get_types, validatestring
+from ClimateWeatherData import smhi
+from ClimateWeatherData.helpers import get_indicators, get_types, validatestring
 
     
 # sub functions

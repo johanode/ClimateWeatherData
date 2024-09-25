@@ -1,6 +1,6 @@
 #See also https://github.com/thebackman/SMHI
 
-from ClimateParameters import api_endpoints, helpers
+from ClimateWeatherData import api_endpoints, helpers
 import requests
 import pandas as pd
 #import json
