@@ -1,8 +1,5 @@
-# ClimateParameters
+# ClimateWeatherData
 
-Python scripts to compute climate indicators, see `indicators.json`. 
-Data from SMHI API https://opendata.smhi.se/apidocs/metobs/index.html, see `parameters.json`
+Python scripts to read weather data and compute climate indicators, see `parameters.json` and `indicators.json`. Weather data is from SMHI API https://opendata.smhi.se/apidocs/metobs/index.html.
 
-See `main.py` for some examples of usage. 
-
-Not quite ready, but almost. Lacks some error handling.
+See `examples/` for some examples of usage. 
