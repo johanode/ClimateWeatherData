@@ -6,11 +6,6 @@ from ClimateWeatherData import smhi, climate
 indicators = climate.list_indicators()
 print(indicators.head())
 
-# List stations where climate data is available
-valid_stations = climate.list_stations()
-# List stations where climate data is available at a certain date
-valid_stations = climate.list_stations(ts='2010-01-23')
-
 # Select weather station
 station_name = 'Luleå-Kallax Flygplats'
 station_id = smhi.get_station_info(station_name)
