@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ClimateParameters import smhi
+from ClimateWeatherData import smhi
 
 
 # Find stations with certain parameter

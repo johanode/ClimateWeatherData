@@ -1,5 +1,5 @@
 # Import libs
-from ClimateParameters import smhi, climate
+from ClimateWeatherData import smhi, climate
 
 # Get climate feature/indicator for a station at a certain time
 # List indicators
