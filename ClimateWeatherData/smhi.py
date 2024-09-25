@@ -9,31 +9,106 @@ import numbers
 import csv
 
 
-def list_stations(param, ts=None):
-    # validate parameter input
-    param = get_param_value(param)
+def list_stations(params, ts=None, full_period=False):
+    """
+    Returns a list of stations that have data for all specified parameters.
     
-    # create the API adress
+    :param params: A single parameter or a list of parameters to filter stations.
+                   Can be a string or a list of parameter strings (e.g., ['TemperaturePast24h', 'PrecipPast12h']).
+    :param ts: Timestamp or range of timestamps (list or tuple) to filter stations based on data availability.
+    :param full_period: If True, ensures that the station has data available for the entire specified period.
+    :return: A DataFrame of stations that have data for all parameters, with no columns specified (full station info).
+    """
+    
+    # Convert a single parameter to a list if it's not already
+    if not isinstance(params, (list, tuple)):
+        params = [params]
+    
+    # Validate and get parameter IDs
+    param_ids = [get_param_value(param) for param in params]
+    
+    # Initialize with stations for the first parameter
+    df_stations = list_stations_for_param(param_ids[0], ts=ts, full_period=full_period)
+    
+    # If no stations are found for the first parameter, return an empty result
+    if df_stations.empty:
+        print(f"No stations found for parameter {params[0]}.")
+        return df_stations
+    
+    # Create a set of station IDs for the first parameter
+    stations = set(df_stations['id'])
+    
+    # Loop through the rest of the parameters and find intersections of stations
+    for param_id in param_ids[1:]:
+        df = list_stations_for_param(param_id, ts=ts, full_period=full_period)
+        
+        # If no stations are found for the parameter, return an empty result
+        if df.empty:
+            print(f"No stations found for parameter ID {param_id}.")
+            return df
+        
+        # Update the station list by intersecting with the new parameter's stations
+        stations = stations.intersection(df['id'].to_list())
+        
+        # If no common stations are left, return an empty result
+        if not stations:
+            print("No common stations found with data for all parameters.")
+            return pd.DataFrame(columns=df_stations.columns)
+    
+    # Return the full station data, filtered by the station IDs that have data for all parameters
+    return df_stations[df_stations['id'].isin(stations)]
+
+
+def list_stations_for_param(param, ts=None, full_period=False):
+    """
+    Helper function to list stations for a single parameter.
+    
+    :param param: The weather parameter ID to list stations for.
+    :param ts: Timestamp or range of timestamps (list or tuple) to filter stations.
+    :param full_period: If True, ensures that the station has data available for the entire specified period.
+    :return: DataFrame of stations for the given parameter.
+    """
+    # Create the API address
     adr = api_endpoints.ADR_PARAMETER
     adr_full = adr.format(parameter=param)
 
-    # send request and get data
+    # Send request and get data
     data = helpers.api_return_data(adr_full)
 
-    # -- gather and wrangle the data about avaliable stations
-    # convert the JSON data to a pandas DF
+    # Gather and wrangle the data about available stations
     df = pd.DataFrame(data["station"])
-    
-    # fix the date and time variables into something readable
+
+    # Fix the date and time variables into something readable
     for col in ['from', 'to', 'updated']:
         df[col] = pd.to_datetime(df[col], unit="ms")
-
+    
+    # If no timestamp is provided, return the full list
     if ts is None:
-        return(df)
-    else:
-        # filter based on timestamp
-        qrstr = "`from` <= '{0}' and `to` >= '{0}'".format(pd.to_datetime(ts).isoformat())
+        return df
+    
+    # If a single timestamp is provided
+    if isinstance(ts, str):
+        ts = pd.to_datetime(ts).isoformat()
+        qrstr = "`from` <= '{0}' and `to` >= '{0}'".format(ts)
         return df.query(qrstr)
+    
+    # If a list or tuple of two timestamps is provided, filter based on the range
+    elif isinstance(ts, (tuple, list)) and len(ts) == 2:
+        start_ts = pd.to_datetime(ts[0]).isoformat()
+        end_ts = pd.to_datetime(ts[1]).isoformat()
+
+        if full_period:
+            # Ensure stations have data for the entire period
+            qrstr = "`from` <= '{0}' and `to` >= '{1}'".format(start_ts, end_ts)
+        else:
+            # Filter stations that were available at some point during the period
+            qrstr = "`from` <= '{1}' and `to` >= '{0}'".format(start_ts, end_ts)
+        
+        return df.query(qrstr)
+    
+    else:
+        raise ValueError("Invalid timestamp format. Must be a string, list, or tuple of two timestamps.")
+
 
 
 def list_parameters():

@@ -32,35 +32,43 @@ def list_indicators():
     df_indicators = pd.DataFrame(get_indicators())
     return df_indicators
 
-def list_stations(parameter_type='all', ts=None):
+
+def list_stations(parameter_type='all', ts=None, full_period=False):    
+    """
+    Returns a list of stations where all relevant data for climate indicators are available.
+    
+    :param parameter_type: Type of climate parameter ('temperature', 'precipitation', 'wind', 'combination', 'all').
+                           If 'all', it includes all climate parameters.
+    :param ts: Timestamp or range of timestamps (list or tuple) to filter stations based on data availability.
+    :param full_period: If True, ensures that the station has data available for the entire specified period.
+    :return: DataFrame containing stations with available data for all relevant parameters.
+    """
+    
+    # Determine the list of parameters based on the parameter_type
     if parameter_type.lower() == 'all':
-        # list all climate paramters
+        # List all climate parameters
         parameters = []
         for ty in climate_weather_parameters:
             parameters += climate_weather_parameters[ty]
     else:
-        # validate that type is valid ['temperature','precipitation','wind','combination']
+        # Validate that the input parameter_type is valid
         ty = validatestring(parameter_type, climate_weather_parameters.keys())
         parameters = climate_weather_parameters[ty]
     
-    # Make variable a set, i.e. remove dublicates
-    paramsset = set(parameters)
+    # Remove duplicates by converting the parameters list to a set
+    paramsset = list(set(parameters))
     
-    # Find stations for first parameter
-    df_stations = smhi.list_stations(paramsset.pop(), ts=ts)
-    # Make stations id a set
-    stations = set(df_stations['id'])
-    # Loop the rest of parameters and update stations list with intersection
-    for param in paramsset:
-        df = smhi.list_stations(param, ts=ts)
-        stations = stations.intersection(df['id'].to_list())
+    # Use the new smhi.list_stations function to get stations for all parameters at once
+    df_stations = smhi.list_stations(params=paramsset, ts=ts, full_period=full_period)
     
-    # Output columns of dataframe
-    cols = ['name','latitude','longitude','active','from','to']
-    # Filter out valid stations
-    df_output = df_stations.set_index('id').loc[list(stations),cols].reset_index()
+    # If no stations are found, return an empty dataframe
+    if df_stations.empty:
+        print("No stations found with data for all parameters.")        
     
-    return df_output
+    # Return the DataFrame as is, without filtering specific columns
+    return df_stations
+
+
     
 def isin_station(station, parameter_type='all'):
     df_stations = list_stations(parameter_type)
