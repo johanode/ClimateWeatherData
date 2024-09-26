@@ -6,7 +6,7 @@ import pandas as pd
 #import json
 #import logging
 import numbers
-import csv
+#import csv
 
 
 def list_stations(params, ts=None, full_period=False):
@@ -112,7 +112,7 @@ def list_stations_for_param(param, ts=None, full_period=False):
 
 
 def list_parameters():
-    df_parameters = pd.DataFrame(helpers.get_parameters())
+    df_parameters = helpers.get_parameters('df')
     return df_parameters
 
 
@@ -131,14 +131,13 @@ def get_station_info(station_input, param_id=None, ts=None):
     """
     # If no param_id is provided, use 'TemperaturePast24h' as the default
     if param_id is None:
-        param = 'TemperaturePast24h'
-        param_id = get_param_value(param)
+        param = 'TemperaturePast24h'        
     
     # Get all stations for the given parameter and optional timestamp
-    stations = list_stations(param_id, ts)
+    stations = list_stations(param, ts)
 
     # If the input is a station ID (int), return the corresponding station name
-    if isinstance(station_input, int):
+    if isinstance(station_input, numbers.Number):
         try:
             station_name = stations.set_index('id').loc[station_input, 'name']
             return station_name
@@ -148,13 +147,38 @@ def get_station_info(station_input, param_id=None, ts=None):
     # If the input is a station name (str), return the corresponding station ID
     elif isinstance(station_input, str):
         try:
-            station_id = stations.set_index('name').loc[station_input, 'id']
+            valid_station = helpers.validatestring(station_input, stations['name'].to_list())
+            station_id = stations.set_index('name').loc[valid_station, 'id']
             return station_id
         except KeyError:
             raise ValueError(f"Station name '{station_input}' not found.")
     
     else:
         raise ValueError("station_input must be either a station name (str) or station ID (int).")
+
+def get_station_value(station):
+    # check if parameter isnumeric
+    if isinstance(station,numbers.Number):
+        station_id = station
+    else:
+        station_id = get_station_info(station)
+    return station_id    
+    
+
+def get_param_name(parameter):    
+    # Load parameters
+    df_parameters = pd.DataFrame(helpers.get_parameters())
+    
+    # Get parameter ID (normalizes whether input is name or ID)
+    parameter_id = get_param_value(parameter)
+    
+    try:
+        # Retrieve the corresponding parameter name
+        parameter_name = df_parameters.set_index('key').loc[parameter_id, 'label']
+        return parameter_name
+    except KeyError:
+        raise ValueError(f"Parameter {parameter} not found.")
+
 
 
 def get_param_value(parameter):
@@ -171,195 +195,96 @@ def get_param_value(parameter):
     
     return parameter_id        
 
-def isin_station(parameter, station, ts=None):
-    # Validate paramter input
-    parameter_id = get_param_value(parameter)
-    
+def isin_station(param, station, ts=None):   
     # check if parameter is available on station
-    df_stations = list_stations(parameter_id, ts=ts)
+    df_stations = list_stations(param, ts=ts)
     valid_stations = df_stations['id'].to_list()
-    return station in valid_stations
+    return get_station_value(station) in valid_stations
 
-def get_time_period(ts, time_period):
-    if isinstance(time_period, str):
-        ts = pd.to_datetime(ts)
-    return tuple(helpers.get_filter(ts, time_period))
+def get_time_period(ts, time_period, time_format='%Y-%m-%d %H:%M'):
+    # Get the start and end timestamps for the period, formatted as datetime objects
+    if time_format == 'isoformat':
+        return helpers.format_ts(ts, time_period=time_period, isoformat=True)    
+    else:
+        ts_period = helpers.format_ts(ts, time_period=time_period, isoformat=False)    
+        # Return a tuple of formatted dates as strings    
+        return tuple(t.strftime(time_format) for t in ts_period)
 
-def read_csv(adr_full, delimiter=';', usecols=None, parse_dates=None, keep_date_col=True, dtype=None):    
-    response = requests.get(adr_full).text
-    lines = response.splitlines()
-    header_row = 8
-    for k, line in enumerate(lines):
-        if k>=header_row and 'Datum' in line:
-            header_row = k
-            break
-    
-    skip_rows = header_row+1
-    
-    cols = lines[header_row].split(delimiter)
-    # print(cols)
-    
-    if usecols is not None:
-        cols=[col for k,col in enumerate(cols) if k in usecols or col in usecols]
-    d = csv.DictReader(lines[skip_rows:], delimiter=delimiter, fieldnames=cols)
-    df = pd.DataFrame(data=list(d), columns=cols)
-    
-    if parse_dates is not None:
-        # [['Datum', 'Tid (UTC)']]
-        if isinstance(parse_dates, dict):            
-            parse_dates = parse_dates.items()
-            # parse_dates = [{key : value} for key, value in parse_dates.items()]
-            
-        for parse_date in parse_dates:
-            if isinstance(parse_date, tuple):
-                result = parse_date[0]
-                parse_date = parse_date[1]
-            elif isinstance(parse_date, list):
-                result = '_'.join(parse_date)     
-            elif isinstance(parse_date, str):            
-                result = parse_date
-            else: #numeric
-                parse_date = df.columns[parse_date]
-                result = parse_date
-                
-            if isinstance(parse_date, list):
-                # s = pd.to_datetime(df[parse_date].astype(str).agg(' '.join, axis=1))
-                s = pd.to_datetime(df[parse_date[0]].str.cat(df[parse_date[1]], sep=' '))
-            else:
-                s = pd.to_datetime(df[parse_date])
-            
-            if result==parse_date:
-                df[result] = s                
-            else:
-                df.insert(0, result, s)  
-            
-            if keep_date_col==False:
-                df.drop(labels=parse_date, axis=1, inplace=True)     
-            else:
-                if isinstance(parse_date, str):
-                    parse_date = [parse_date]
-                for col in parse_date:
-                    if isinstance(keep_date_col, str):
-                            if not col==keep_date_col:
-                                df.drop(labels=col, axis=1, inplace=True)
-                    elif isinstance(keep_date_col, list):
-                        if not col in keep_date_col:
-                            df.drop(labels=col, axis=1, inplace=True)
-                      
-    if dtype is not None:
-        if isinstance(dtype, dict):
-            for key, ty in dtype.items():
-                if not isinstance(key, str):
-                    key = df.columns[key]
-                if ty == 'numeric':
-                    df[key] = pd.to_numeric(df[key], errors='coerce')
-                else:
-                    df[key] = pd.to_numeric(df[key], downcast=ty, errors='coerce')
-                    # df[key] = df[key].astype(ty)
-        else:
-            for k, ty in enumerate(dtype):
-                key = df.columns[k]
-                if ty == 'numeric':
-                    df[key] = pd.to_numeric(df[key], errors='coerce')
-                else:
-                    df[key] = pd.to_numeric(df[key], downcast=ty, errors='coerce')
-                    # df[key] = df[key].astype(ty)  
-    return df
 
-def get_corrected(param, station, translate=True, json=False):
-    # validate input weather parameter (param)
+
+
+def get_corrected(param, station, translate=True):
+    """
+    Get corrected data from the SMHI API for a specific weather parameter and station.
+    
+    :param param: The weather parameter ID or name.
+    :param station: The station ID.
+    :param translate: Whether to translate the column names to English.
+    :return: A DataFrame with the corrected data.
+    """
+    # Validate the input weather parameter (param)
     param = get_param_value(param)
     
-    # create the API adress
-    adr = api_endpoints.ADR_CORRECTED
-    adr_full = adr.format(parameter = param, station = station)  
-    print(adr_full)
+    # Validate the input station
+    station = get_station_value(station)
     
-    # download the csv data
-    if param in [1, 26, 27, 39]: #[TemperaturePast1h]        
-        k_value = 2        
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})      
-    elif param in [2, 19, 20]: #[TemperaturePast24h, TemperatureMinPast24h, TemperatureMaxPast24h]        
-        k_value = 3
-        df = read_csv(adr_full, usecols=[0,1,2,3,4], parse_dates=[0,1,2], dtype={k_value:'numeric'})  
-        
-    elif param in [3,4,21]: #[Windspeed, WindDirection, WindGust]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
-        
+    # Create the API address
+    adr_full = api_endpoints.ADR_CORRECTED.format(parameter=param, station=station)
     
-    elif param in [5, 23]: #[PrecipPast24hAt06, PrecipPastMonth]        
-        k_value = 3
-        df = read_csv(adr_full, usecols=[0,1,2,3,4], parse_dates=[0,1,2], dtype={k_value:'numeric'})  
-        
-    elif param in [6]: #[Humidity]
-        k_value = 2    
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
-        
-
-    elif param in [7]: #[PrecioPast1h]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
-        
-        
-    elif param in [8]: #[SnowDepthPast24h]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
-        
+    # Define configurations for each parameter or parameter group
+    default_config = {'usecols': [0, 1, 2, 3, 4], 'k_value': 3, 'parse_dates': [0, 1, 2]}
+    param_configs = {
+        1:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # TemperaturePast1h
+        26: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # TemperatureMinPast24h
+        27: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # TemperatureMaxPast24h
+        39: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # DewPointTempPast1h
+        2:  {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # TemperaturePast24h
+        19: {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # TemperatureMinPast24h
+        20: {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # TemperatureMaxPast24h
+        3:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # Windspeed
+        4:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # WindDirection
+        21: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # WindGust
+        5:  {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # PrecipPast24hAt06
+        23: {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # PrecipPastMonth
+        6:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # Humidity
+        7:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # PrecioPast1h
+        8:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # SnowDepthPast24h
+        9:  {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # Pressure
+        12: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # Visibility
+        13: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # CurrentWeather
+        16: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # CloudCover
+        28: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # Second CloudLayer
+        29: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # CloudAmount
+        18: {'usecols': [0, 1, 2, 3, 4], 'parse_dates': [0, 1, 2], 'k_value': 3},                           # PrecipTypePast24h
+        17: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}, # PrecipPast12h
+        40: {'usecols': [0, 1, 2, 3], 'parse_dates': {'Datum (UTC)': ['Datum', 'Tid (UTC)']}, 'k_value': 2}  # GroundCondition
+    }
     
-    elif param in [9, 12, 13]: #[Pressure, Visibility, CurrentWeather]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
+    # Get the configuration for the given parameter, or apply a default configuration
+    config = param_configs.get(param, default_config)
     
-    elif param in [16, 28, 29, 30, 31, 32, 33, 36]: #[ CloudCover]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
-        
-    elif param in [18]: #[PrecipTypePast24h] 
-        k_value = 3        
-        df = read_csv(adr_full, usecols=[0,1,2,3,4], parse_dates=[0,1,2])
+    # Download the CSV data
+    df = helpers.read_csv(
+        adr_full,
+        usecols=config['usecols'],
+        parse_dates=config['parse_dates'],
+        dtype={config['k_value']: 'numeric'}
+    )
     
-        
-    elif param in [17]: #[PrecipPast12h] 
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'])
-        
-    elif param in [40]: #[GroundCondition]
-        k_value = 2
-        df = read_csv(adr_full, usecols=[0,1,2,3], parse_dates={'Datum (UTC)': ['Datum', 'Tid (UTC)']}, keep_date_col=['Datum'], dtype={k_value:'numeric'})
+    # Rename columns to English if required
+    df = helpers.rename_columns_to_english(df, config['k_value'], translate=translate)
     
-    else:
-        k_value = 3
-        df = read_csv(adr_full, usecols=[0,1,2,3,4], parse_dates=[0,1,2], dtype={k_value:'numeric'})
-
-  
-    # Rename columns to english
-    if df.shape[0]>0 and translate:
-        columns = {
-            'Från Datum Tid (UTC)' : 'From Date (UTC)',
-            'Till Datum Tid (UTC)' : 'To Date (UTC)',
-            'Representativt dygn' : 'Date',
-            'Datum (UTC)' : 'Date (UTC)',
-            'Datum' : 'Date',
-            'Kvalitet' : 'Quality'
-            }
-        # if k_value==3:
-        #     columns[df.columns[0]] = 'From Date (UTC)'
-        #     columns[df.columns[1]] = 'To Date (UTC)'    
-        #     columns[df.columns[2]] = 'Date'
-        # elif k_value==2:
-        #     columns[df.columns[0]] = 'Date (UTC)'
-        #     columns[df.columns[1]] = 'Date' 
-        columns[df.columns[k_value]] = 'Value'
-        # columns[df.columns[k_value+1]] = 'Quality'
-        df.rename(columns = columns, inplace=True)
-        
     return df
+
 
 
 def get_latest_months(param, station):
     # validate input weather parameter (param)
-    param = get_param_value(param)    
+    param = get_param_value(param)   
+    
+    # Validate the input station
+    station = get_station_value(station)
+    
     # create the API adress
     adr = api_endpoints.ADR_LATEST_MONTHS
     adr_full = adr.format(parameter = param, station = station)    
@@ -371,15 +296,16 @@ def get_latest_months(param, station):
     df = pd.DataFrame(response.json()['value'])
     
     df.rename(columns = {'Value':'value'}, inplace=True)
-    
-    if param in [5]: #PrecipPast24hAt06
-        date_cols = ['from', 'to', 'ref']
+
+    date_cols = ['from', 'to', 'ref']
+    if param in [2,5] or all([key in df for key in date_cols]):    
         df['value'] = pd.to_numeric(df['value'])
     elif param in [17]: #PrecipPast12h
         date_cols = ['date']
     else:
         date_cols = ['date']
         df['value'] = pd.to_numeric(df['value'])
+    
     for col in date_cols:
         if col=='ref':
             df[col] = pd.to_datetime(df[col]).dt.date
@@ -401,23 +327,68 @@ def get_latest_months(param, station):
     return df
 
 
-def get_values(param, station, ts=None, time_period=None, idx='Date', col='Value', check_station=False, direction=None):
-    # validate input weather parameter (param)
-    parameter_id = get_param_value(param)
+def get_values(param, station, ts=None, time_period=None, idx=None, col='Value', check_station=False):
+    """
+    Get weather parameter values for a given station, parameter, and timestamp or time period.
     
-    if check_station:
-        # Also check if parameter is available for input weather station (station)
-        if isin_station(parameter_id, station):
-           print('Paramater not avaiable for selected station') 
+    :param param: The weather parameter (either ID or name).
+    :param station: The station ID or name.
+    :param ts: Timestamp or tuple of timestamps.
+    :param time_period: Time period ('y', 'm', 's') for yearly, monthly, or seasonal data.
+    :param col: The column name to extract (default is 'Value').
+    :param check_station: Check if the parameter is available for the station.    
+    :return: Filtered weather data.
+    """
         
-    # Download corrected historical data (last 3 months not available)
-    data = get_corrected(parameter_id, station, json=True)
-    
-    # if timestamp in input filter data based on timestamp and time period
-    # idx specified index column and col data column
+    # Optional: Check if the parameter is available in the station
+    if check_station and not isin_station(param, station):
+        raise ValueError(f"Parameter {param} is not available for station {station}")
+
+    # Ensure ts is in datetime format for comparison, if provided
     if ts is not None:
-        values = helpers.filter_time(data, ts, time_period, idx=idx, col=col, direction=direction)
+        ts = helpers.format_ts(ts, time_period=time_period)
+
+    data_frames = []
+    
+    # If ts is not provided or goes beyond the historical range, get the corrected historical data
+    if ts is None or min(ts) <= (pd.Timestamp.now() - pd.DateOffset(months=3)):
+        # Download corrected historical data (last 3 months not available)
+        data_historical = get_corrected(param, station)
+        data_historical['Date'] = pd.to_datetime(data_historical['Date'], errors='coerce')
+        data_frames.append(data_historical)
+
+    # If ts is not provided or goes beyond the historical range, get the latest data as well
+    if ts is None or max(ts) > (pd.Timestamp.now() - pd.DateOffset(months=4)):
+        # Download latest 4 month data
+        data_latest = get_latest_months(param, station)
+        data_latest['Date'] = pd.to_datetime(data_latest['Date'], errors='coerce')
+        data_frames.append(data_latest)
+
+    # Concatenate historical and latest data
+    data = pd.concat(data_frames)
+
+    # Automatically detect the correct index column if idx is not provided
+    if idx is None:
+        if 'Date (UTC)' in data.columns:
+            idx = 'Date (UTC)'  # Use 'Date (UTC)' if available (for hourly data)
+        elif 'Date' in data.columns:
+            idx = 'Date'  # Use 'Date' for daily data
+        else:
+            raise ValueError("Neither 'Date' nor 'Date (UTC)' columns found in the data.")
+    
+    # Remove duplicates, keeping historical data for overlapping dates
+    data = data.drop_duplicates(subset=idx, keep='first')
+   
+    # Sort by the selected index for clean chronological ordering
+    data = data.sort_values(by=idx).reset_index(drop=True)
+    
+    # Filter data based on ts and time_period if provided
+    if ts is not None:
+        values = helpers.filter_time(data, ts, time_period, idx=idx, col=col)
     else:
         values = data.set_index(idx)[col]
-        
+
+    values.name = get_param_name(param)
     return values
+
+
