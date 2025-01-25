@@ -37,7 +37,7 @@ print(data)
 
 # Hourly data
 param = 'TemperaturePast1h'
-ts = '2012-04-03 11:00'
+ts = '2015-06-23 02:00'
 data = smhi.get_weather_data(param, station, ts)
 print(data)
 

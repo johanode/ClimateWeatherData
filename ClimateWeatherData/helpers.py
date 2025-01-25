@@ -234,6 +234,124 @@ def get_types(cat):
     else: 
         return []
     
+
+def get_closest(gdf, point, return_distance=False):
+    """
+    Find the closest point in a GeoDataFrame to a given input point and return distance in meters.
+    
+    Parameters:
+    - gdf (GeoDataFrame or DataFrame): GeoDataFrame or DataFrame with geometry.
+    - point (tuple, list, or shapely.geometry.Point): Input point as (longitude, latitude) or a Point object.
+    - return_distance (bool): If True, return the distance (in meters) along with the closest point.
+    
+    Returns:
+    - Closest point row from the GeoDataFrame.
+    - If return_distance is True, returns (row, distance in meters).
+    """
+    if not hasattr(gdf, 'distance'):
+        gdf = add_distance_method(gdf)
+    
+    # Calculate distances and find the closest
+    distances = gdf.distance(point)
+    closest = gdf.loc[distances.idxmin()]    
+    
+    # Return closest row, with or without distance
+    if return_distance:
+        min_distance = distances.min()  # Distance is now in meters
+        return closest, min_distance
+    return closest
+   
+def prepare_stations_geo(stations_df):
+    import geopandas as gpd
+    from shapely.geometry import Point
+    
+    """
+    Convert a DataFrame of stations to a GeoDataFrame with geometry.
+    """
+    
+    if isinstance(stations_df, gpd.GeoDataFrame):
+        return stations_df
+    
+    if isinstance(stations_df, pd.Series):
+        gdf = stations_df.copy()    # Make a copy to avoid SettingWithCopyWarnings
+        if {'latitude', 'longitude'}.issubset(stations_df.index):
+            gdf['geometry'] = Point(gdf['longitude'], gdf['latitude'])
+            gdf.geometry = gpd.GeoSeries([gdf['geometry']], crs="EPSG:4326")[0]
+        else:
+            raise ValueError("The input Series must contain 'latitude' and 'longitude' values.")
+    else:
+        if not {'latitude', 'longitude'}.issubset(stations_df.columns):
+            raise ValueError("The DataFrame must contain 'latitude' and 'longitude' columns.")
+    
+        gdf = gpd.GeoDataFrame(
+            stations_df,
+            geometry=gpd.points_from_xy(stations_df['longitude'], stations_df['latitude']),
+            crs="EPSG:4326"
+        )
+    return gdf
+
+def add_distance_method(gdf):
+    """
+    Add a method to calculate the distance from a given point in meters.
+    
+    Parameters:
+    - gdf (DataFrame, Series, or GeoDataFrame): Input DataFrame or Series. 
+      Must contain 'latitude' and 'longitude' columns if not already a GeoDataFrame.
+    
+    Returns:
+    - GeoDataFrame or Series: The input with an additional `distance` method for distance calculations.
+    """
+    
+    if hasattr(gdf, 'distance'):
+        return 
+    
+    import geopandas as gpd
+    from shapely.geometry import Point
+
+    def distance(self, point):
+        """
+        Calculate the distance from the DataFrame/Series to a given point in meters.
+
+        Parameters:
+        - point (list or tuple): [latitude, longitude]
+
+        Returns:
+        - pandas.Series or float: Series of distances in meters for DataFrame, or a single float for Series.
+        """
+        if isinstance(point, (list, tuple)):
+            # Convert input to Shapely Point (longitude, latitude)
+            point_geom = Point(point[1], point[0])  # Note: GeoPandas uses (lon, lat) internally
+        elif isinstance(point, Point):
+            point_geom = point
+        else:
+            raise ValueError("Point must be a list, tuple, or shapely.geometry.Point.")
+
+        if isinstance(self, gpd.GeoDataFrame):
+            # Ensure the GeoDataFrame is in a meter-based CRS
+            gdf_meters = self.to_crs(epsg=3857)
+            # Transform the point to the same CRS
+            point_meters = gpd.GeoSeries([point_geom], crs="EPSG:4326").to_crs(epsg=3857)[0]
+
+            # Calculate distances
+            return gdf_meters.geometry.distance(point_meters)
+
+        elif isinstance(self, pd.Series):
+            # Handle Series: Calculate distance for a single row
+            gdf_meters = gpd.GeoSeries([self.geometry], crs="EPSG:4326").to_crs(epsg=3857)[0]
+            point_meters = gpd.GeoSeries([point_geom], crs="EPSG:4326").to_crs(epsg=3857)[0]
+
+            # Return the distance as a float
+            return gdf_meters.distance(point_meters)
+
+    # Convert to GeoDataFrame or GeoSeries if not already one
+    gdf = prepare_stations_geo(gdf)
+
+    # Bind the distance method dynamically    
+    gdf.distance = distance.__get__(gdf, gpd.GeoDataFrame if isinstance(gdf, gpd.GeoDataFrame) else pd.Series)
+    return gdf
+
+
+    
 def download_and_parse_csv(adr_full, delimiter=';', usecols=None):
     response = requests.get(adr_full).text
     lines = response.splitlines()

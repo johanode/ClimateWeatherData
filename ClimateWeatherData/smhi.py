@@ -110,6 +110,17 @@ def list_stations_for_param(param, ts=None, full_period=False):
         raise ValueError("Invalid timestamp format. Must be a string, list, or tuple of two timestamps.")
 
 
+def stations_geo(stations):
+    return helpers.prepare_stations_geo(stations)
+
+def closest_station(point, parameters=None, ts=None, full_period=False, stations=None):    
+    if stations is None:
+        if parameters is None:
+            parameters = ['TemperaturePast24h']
+        stations = list_stations(parameters, ts=ts, full_period=full_period) 
+    station = helpers.get_closest(stations, point)
+    return station
+    
 
 def list_parameters():
     df_parameters = helpers.get_parameters('df')
@@ -153,13 +164,18 @@ def get_station_info(station_input, param_id=None, ts=None):
         except KeyError:
             raise ValueError(f"Station name '{station_input}' not found.")
     
+    elif isinstance(station_input, pd.Series) and 'id' in station_input:
+        return station_input['id']
     else:
-        raise ValueError("station_input must be either a station name (str) or station ID (int).")
+        raise ValueError("station_input must be either a station name (str), station ID (int) or Series with index 'id'.")
+
 
 def get_station_value(station):
     # check if parameter isnumeric
     if isinstance(station,numbers.Number):
         station_id = station
+    elif isinstance(station, pd.Series) and 'id' in station:
+        station_id = station['id']
     else:
         station_id = get_station_info(station)
     return station_id    
@@ -326,6 +342,8 @@ def get_latest_months(param, station):
     
     return df
 
+def get_weather_data(param, station, ts=None, time_period=None):
+    return get_values(param, station, ts=ts, time_period=time_period)
 
 def get_values(param, station, ts=None, time_period=None, idx=None, col='Value', check_station=False):
     """
