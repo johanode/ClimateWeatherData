@@ -379,7 +379,10 @@ def get_values(param, station, ts=None, time_period=None, idx=None, col='Value',
     if ts is None or max(ts) > (pd.Timestamp.now() - pd.DateOffset(months=4)):
         # Download latest 4 month data
         data_latest = get_latest_months(param, station)
-        data_latest['Date'] = pd.to_datetime(data_latest['Date'], errors='coerce')
+        date_col = next((k for k in data_latest.columns if k in ["Date", "Date (UTC)"]), None)   
+        if date_col is None:
+            raise ValueError("Neither 'Date' nor 'Date (UTC)' columns found in the data.")
+        data_latest[date_col] = pd.to_datetime(data_latest[date_col], errors='coerce')
         data_frames.append(data_latest)
 
     # Concatenate historical and latest data
